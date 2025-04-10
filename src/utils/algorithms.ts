@@ -50,7 +50,7 @@ export const mlfqScheduler = (
   currentTime: number,
   queues: Process[][],
 ): Process | null => {
-  for (let q of queues) {
+  for (const q of queues) {
     const readyQueue = q.filter(
       (p) => !p.completed && p.arrivalTime <= currentTime,
     );
