@@ -8,6 +8,7 @@ const initialState: SimulationState = {
   quantum: 4,
   activeProcessId: null,
   status: SimulationStatus.PAUSED,
+  preemptive: false,
 };
 
 const schedulerSlice = createSlice({
@@ -42,6 +43,9 @@ const schedulerSlice = createSlice({
     setActiveProcess(state, action: PayloadAction<number | null>) {
       state.activeProcessId = action.payload;
     },
+    togglePremeption(state) {
+      state.preemptive = !state.preemptive;
+    },
   },
 });
 
@@ -54,5 +58,6 @@ export const {
   setAlgorithm,
   setQuantum,
   setActiveProcess,
+  togglePremeption,
 } = schedulerSlice.actions;
 export default schedulerSlice.reducer;

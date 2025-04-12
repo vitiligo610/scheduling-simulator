@@ -9,38 +9,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-import { useAppDispatch } from "@/lib/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { addProcess } from "@/lib/features/process/processSlice";
 import { ProcessStatus } from "@/lib/definitions";
 
-const processFormSchema = z.object({
-  arrivalTime: z.coerce
-    .number({ invalid_type_error: "Arrival time must be a number." })
-    .min(0, { message: "Arrival time cannot be negative." })
-    .int({ message: "Arrival time must be an integer." }),
-  burstTime: z.coerce
-    .number({ invalid_type_error: "Burst time must be a number." })
-    .min(1, { message: "Burst time must be at least 1." })
-    .int({ message: "Burst time must be an integer." }),
-  priority: z.coerce
-    .number({ invalid_type_error: "Priority must be a number." })
-    .min(1, { message: "Priority must be at least 1." })
-    .int({ message: "Priority must be an integer." })
-    .optional(),
-});
-
-type ProcessFormValues = z.infer<typeof processFormSchema>;
+const createProcessFormSchema = (minArrivalTime: number) =>
+  z.object({
+    arrivalTime: z.coerce
+      .number({ invalid_type_error: "Arrival time must be a number." })
+      .min(minArrivalTime, { message: `Arrival time cannot be less than ${minArrivalTime}.` })
+      .int({ message: "Arrival time must be an integer." }),
+    burstTime: z.coerce
+      .number({ invalid_type_error: "Burst time must be a number." })
+      .min(1, { message: "Burst time must be at least 1." })
+      .int({ message: "Burst time must be an integer." }),
+    priority: z.coerce
+      .number({ invalid_type_error: "Priority must be a number." })
+      .min(1, { message: "Priority must be at least 1." })
+      .int({ message: "Priority must be an integer." })
+      .optional(),
+  });
 
 const ProcessForm = () => {
   const dispatch = useAppDispatch();
+  const scheduler = useAppSelector(state => state.scheduler);
+  const processFormSchema = createProcessFormSchema(scheduler.currentTime);
+  type ProcessFormValues = z.infer<typeof processFormSchema>;
 
   // Initialize the form hook
   const form = useForm<ProcessFormValues>({
     resolver: zodResolver(processFormSchema),
     defaultValues: {
       arrivalTime: 0,
-      burstTime: 10,
-      priority: 3,
+      burstTime: 5,
+      priority: 1,
     },
   });
 
@@ -108,7 +110,7 @@ const ProcessForm = () => {
                       <Input
                         id={field.name}
                         type="number"
-                        min="0"
+                        min={scheduler.currentTime}
                         placeholder="0"
                         {...field}
                       />

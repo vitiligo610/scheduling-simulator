@@ -1,20 +1,16 @@
 "use client";
 
-import { NavigationMenuLink } from "@/components/ui/navigation-menu";
-import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 
 const AboutDialog = () => (
   <Dialog>
     <DialogTrigger asChild>
-      <NavigationMenuLink
-        className={cn(
-          "group inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent text-primary hover:text-primary focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
-        )}
-      >
-        About
-      </NavigationMenuLink>
+      <Button variant="outline" size="icon">
+        <HelpCircle />
+      </Button>
     </DialogTrigger>
     <DialogContent>
       <DialogHeader>

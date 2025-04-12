@@ -35,10 +35,7 @@ const RootLayout = ({ children }: Readonly<{
     disableTransitionOnChange
   >
     <StoreProvider>
-      <div>
-        {/*<Navbar />*/}
-        {children}
-      </div>
+      {children}
     </StoreProvider>
   </ThemeProvider>
   <Toaster />

@@ -38,4 +38,5 @@ export interface SimulationState {
   quantum?: number;
   activeProcessId?: number | null;
   status: SimulationStatus;
+  preemptive: Boolean;
 }
