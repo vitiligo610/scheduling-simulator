@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { SchedulingAlgorithm, SimulationState } from "@/lib/definitions";
+import { SchedulingAlgorithm, SimulationState, SimulationStatus } from "@/lib/definitions";
 
 const initialState: SimulationState = {
   currentTime: 0,
@@ -7,6 +7,7 @@ const initialState: SimulationState = {
   selectedAlgorithm: SchedulingAlgorithm.FCFS,
   quantum: 4,
   activeProcessId: null,
+  status: SimulationStatus.PAUSED,
 };
 
 const schedulerSlice = createSlice({
@@ -14,9 +15,11 @@ const schedulerSlice = createSlice({
   initialState,
   reducers: {
     startSimulation(state) {
+      state.status = SimulationStatus.RUNNING;
       state.isRunning = true;
     },
     pauseSimulation(state) {
+      state.status = SimulationStatus.PAUSED;
       state.isRunning = false;
     },
     resetSimulation(state) {
@@ -27,13 +30,16 @@ const schedulerSlice = createSlice({
     incrementTime(state) {
       state.currentTime++;
     },
+    setSimulationStatus(state, action: PayloadAction<SimulationStatus>) {
+      state.status = action.payload;
+    },
     setAlgorithm(state, action: PayloadAction<SchedulingAlgorithm>) {
       state.selectedAlgorithm = action.payload;
     },
     setQuantum(state, action: PayloadAction<number>) {
-      state.quantum = action.payload;
+      state.quantum = action.payload <= 0 ? 1 : action.payload;
     },
-    setActiveProcess(state, action: PayloadAction<string | null>) {
+    setActiveProcess(state, action: PayloadAction<number | null>) {
       state.activeProcessId = action.payload;
     },
   },
@@ -44,6 +50,7 @@ export const {
   pauseSimulation,
   resetSimulation,
   incrementTime,
+  setSimulationStatus,
   setAlgorithm,
   setQuantum,
   setActiveProcess,

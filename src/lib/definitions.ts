@@ -1,21 +1,34 @@
+export enum ProcessStatus {
+  READY = "ready",
+  RUNNING = "running",
+  WAITING = "waiting",
+  COMPLETED = "completed",
+}
+
 export interface Process {
-  id: string;
+  id: number;
   name: string;
+  status: ProcessStatus;
   arrivalTime: number;
   burstTime: number;
   remainingTime: number;
   priority?: number;
-  startTime?: number;
-  endTime?: number;
-  completed: boolean;
+  startTime: number | undefined;
+  endTime: number | undefined;
 }
 
 export enum SchedulingAlgorithm {
-  FCFS = "FCFS",
-  SJF = "SJF",
-  RR = "RR",
-  PRIORITY = "Priority",
-  MLFQ = "MLFQ",
+  FCFS = "fcfs",
+  SJF = "sjf",
+  RR = "rr",
+  PRIORITY = "priority",
+  MLFQ = "mlfq",
+}
+
+export enum SimulationStatus {
+  RUNNING = "running",
+  IDLE = "idle",
+  PAUSED = "paused",
 }
 
 export interface SimulationState {
@@ -23,5 +36,6 @@ export interface SimulationState {
   isRunning: boolean;
   selectedAlgorithm: SchedulingAlgorithm;
   quantum?: number;
-  activeProcessId?: string | null;
+  activeProcessId?: number | null;
+  status: SimulationStatus;
 }

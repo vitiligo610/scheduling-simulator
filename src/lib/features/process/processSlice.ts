@@ -3,10 +3,12 @@ import { Process } from "@/lib/definitions";
 
 interface ProcessState {
   processes: Process[];
+  lastProcessId: number;
 }
 
 const initialState: ProcessState = {
   processes: [],
+  lastProcessId: 0,
 };
 
 const processSlice = createSlice({
@@ -14,9 +16,10 @@ const processSlice = createSlice({
   initialState,
   reducers: {
     addProcess(state, action: PayloadAction<Process>) {
+      action.payload.id = ++state.lastProcessId;
       state.processes.push(action.payload);
     },
-    removeProcess(state, action: PayloadAction<string>) {
+    removeProcess(state, action: PayloadAction<number>) {
       state.processes = state.processes.filter((p) => p.id !== action.payload);
     },
     updateProcess(state, action: PayloadAction<Process>) {

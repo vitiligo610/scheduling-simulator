@@ -1,45 +1,45 @@
-import { Cpu } from "lucide-react";
-import Link from "next/link";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
-import { cn } from "@/lib/utils";
-import { ModeToggle } from "@/components/ui/mode-toggle";
-import AboutDialog from "@/components/about-dialog";
+"use client";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-];
+import { Button } from "@/components/ui/button";
+import { Clock, Download, HelpCircle, Play, RotateCcw, SkipForward } from "lucide-react";
+import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from "@/components/ui/navigation-menu";
+import { ModeToggle } from "@/components/ui/mode-toggle";
 
 const Navbar = () => (
-  <header className="px-10 border-b">
-    <div className="container flex h-14 items-center">
-      <div className="mr-4 flex">
-        <Link href="/" className="flex items-center space-x-2">
-          <Cpu className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl hidden md:inline-block text-primary">Orchestrator</span>
-        </Link>
+  <div className="border-b">
+    <div className="flex h-14 items-center justify-between px-4">
+      {/* Left side - Logo and Heading */}
+      <div className="flex items-center gap-2">
+        <Clock className="h-5 w-5 " />
+        <h1 className="text-xl font-bold">Interactive Scheduling Simulator</h1>
       </div>
-      <NavigationMenu className="ml-auto">
+
+      <NavigationMenu>
         <NavigationMenuList>
-          {navLinks.map((link) => (
-            <NavigationMenuItem key={link.href}>
-              <Link href={link.href} legacyBehavior passHref>
-                <NavigationMenuLink
-                  className={cn(
-                    "group inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent text-primary hover:text-primary focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
-                  )}
-                >
-                  {link.label}
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
-          ))}
           <NavigationMenuItem>
-            <AboutDialog />
+            <Button size="icon">
+              <Play />
+            </Button>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Button variant="outline" size="icon">
+              <RotateCcw />
+            </Button>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Button variant="outline" size="icon">
+              <SkipForward />
+            </Button>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Button variant="outline" size="icon">
+              <Download />
+            </Button>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Button variant="outline" size="icon">
+              <HelpCircle />
+            </Button>
           </NavigationMenuItem>
           <NavigationMenuItem>
             <ModeToggle />
@@ -47,7 +47,7 @@ const Navbar = () => (
         </NavigationMenuList>
       </NavigationMenu>
     </div>
-  </header>
+  </div>
 );
 
 export default Navbar;

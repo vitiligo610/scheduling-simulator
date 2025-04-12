@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import StoreProvider from "@/providers/store-provider";
 import React from "react";
-import Navbar from "@/components/navbar";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,11 +36,12 @@ const RootLayout = ({ children }: Readonly<{
   >
     <StoreProvider>
       <div>
-        <Navbar />
+        {/*<Navbar />*/}
         {children}
       </div>
     </StoreProvider>
   </ThemeProvider>
+  <Toaster />
   </body>
   </html>
 );

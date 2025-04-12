@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-type ProcessStatus = "waiting" | "ready" | "running" | "completed"
+import { ProcessStatus } from "@/lib/definitions";
 
 interface ProcessStatusBadgeProps {
   status: ProcessStatus;

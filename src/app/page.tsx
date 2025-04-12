@@ -1,32 +1,25 @@
-import ProcessForm from "@/components/process-form";
-import SimulationControls from "@/components/simulation-controls";
-import AlgorithmSelector from "@/components/algorithm-selector";
-import ProcessList from "@/components/process-list";
-import GanttChart from "@/components/gantt-chart";
-import QueueVisualization from "@/components/queue-visualization";
-import PerformanceMetrics from "@/components/performance-metrics";
+import Navbar from "@/components/navbar";
+import ProcessManagement from "@/components/process-management";
+import Visualization from "@/components/visualization";
+import PerformanceFeedback from "@/components/performance-feedback";
 
-const Page = () => (
-  <div className="container mx-auto py-6 px-10">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Left Column - Controls (1/3 width) */}
-      <div className="space-y-6">
-        <SimulationControls />
-        <AlgorithmSelector />
-        <ProcessForm />
-      </div>
-
-      {/* Right Column - Visualizations (2/3 width) */}
-      <div className="md:col-span-2 space-y-6">
-        <ProcessList />
-        <GanttChart />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <QueueVisualization />
-          <PerformanceMetrics />
+const SimulatorPage = () => {
+  return (
+    <div className="flex flex-col h-screen">
+      <Navbar />
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-1/4 border-r p-4">
+          <ProcessManagement />
+        </div>
+        <div className="w-2/4 border-r p-4 overflow-y-auto">
+          <Visualization />
+        </div>
+        <div className="w-1/4 p-4 overflow-y-auto">
+          <PerformanceFeedback />
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-export default Page;
+export default SimulatorPage;

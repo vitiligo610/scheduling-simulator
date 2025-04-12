@@ -1,0 +1,16 @@
+import ProcessQueue from "./process-queue";
+import ProcessForm from "./process-form";
+
+const ProcessManagement = () => (
+  <div className="flex flex-col gap-4 h-full">
+    <h2 className="text-lg font-semibold">Process Management</h2>
+    <div className="flex-shrink-0">
+      <ProcessForm />
+    </div>
+    <div className="flex-1 min-h-0">
+      <ProcessQueue />
+    </div>
+  </div>
+);
+
+export default ProcessManagement;
