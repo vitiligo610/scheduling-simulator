@@ -3,7 +3,6 @@ import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from "@/compon
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import SimulationControls from "@/components/simulation-controls";
 import AboutDialog from "@/components/about-dialog";
-import SimulationStatus from "@/components/simulation-status";
 
 const Navbar = () => (
   <div className="border-b">
@@ -12,7 +11,6 @@ const Navbar = () => (
         <Cpu className="h-5 w-5 " />
         <h1 className="text-xl font-bold">Orchestrator</h1>
       </div>
-      <SimulationStatus />
       <NavigationMenu>
         <NavigationMenuList>
           <SimulationControls />

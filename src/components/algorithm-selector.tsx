@@ -40,12 +40,27 @@ const AlgorithmSelector = () => {
         <Input id="time-quantum" type="number" min="1" placeholder="2" value={scheduler.quantum}
                onChange={e => dispatch(setQuantum(Number(e.target.value)))} />
       </div>
-      <div className="flex items-center justify-end space-x-2">
-        <Label htmlFor="preemptive" className="text-sm">
-          Preemptive Mode
-        </Label>
-        <Checkbox id="preemptive" checked={!!scheduler.preemptive}
-                  onCheckedChange={() => dispatch(togglePremeption())} />
+      <div className="flex flex-col items-end justify-between space-y-2">
+        <div className="flex items-center justify-end space-x-2">
+          <Label htmlFor="preemptive" className="text-sm">
+            Preemptive Mode
+          </Label>
+          <Checkbox id="preemptive" checked={!!scheduler.preemptive}
+                    onCheckedChange={() => dispatch(togglePremeption())} />
+        </div>
+        <div className="flex items-center gap-2 w-full">
+          <Label className="whitespace-nowrap">
+            Current Time
+          </Label>
+          <Input
+            type="number"
+            disabled
+            min="0"
+            placeholder="0"
+            value={scheduler.currentTime}
+            className="flex-1 p-0 bg-transparent disabled:cursor-not-allowed disabled:bg-transparent-important border disabled:opacity-100 outline-none text-right"
+          />
+        </div>
       </div>
     </div>
   );
