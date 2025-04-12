@@ -17,32 +17,56 @@ export const simulationTick = createAsyncThunk<void, void, {
 }>("scheduler/simulationTick", async (_, { dispatch, getState }) => {
   const state = getState();
   const { scheduler, processes: processState } = state;
-  const { currentTime, activeProcessId, selectedAlgorithm } = scheduler; // Added status
+  const { currentTime, activeProcessId, selectedAlgorithm, preemptive } = scheduler;
   const processes = processState.processes;
-
-  const nextTime = currentTime + 1;
 
   let currentProcess: Process | null | undefined = null;
   if (activeProcessId !== null) currentProcess = processes.find((p) => p.id === activeProcessId);
 
   let cpuWasIdleThisTick = false;
+  let preemptionOccured = false;
   let nextActiveProcessId: number | null | undefined = activeProcessId;
 
   if (currentProcess && currentProcess.status !== ProcessStatus.COMPLETED) {
     const updatedProcess = { ...currentProcess };
-    updatedProcess.remainingTime--;
+    if (preemptive && selectedAlgorithm !== SchedulingAlgorithm.FCFS) {
+      let availableProcess: Process | null = null;
+      if (selectedAlgorithm === SchedulingAlgorithm.SJF) {
+        availableProcess = processes.find(p => p.arrivalTime === currentTime && p.burstTime < updatedProcess.burstTime) ?? null;
+      } else if (selectedAlgorithm === SchedulingAlgorithm.PRIORITY) {
+        availableProcess = processes.find(p => p.arrivalTime === currentTime && p.priority < updatedProcess.priority) ?? null;
+      }
+      if (availableProcess) {
+        preemptionOccured = true;
+        nextActiveProcessId = availableProcess.id;
+        dispatch(setActiveProcess(availableProcess.id));
+        updatedProcess.status = ProcessStatus.READY;
+        updatedProcess.remainingTime--;
+        dispatch(updateProcess(updatedProcess));
+        const updatedAvailableProcess = { ...availableProcess, status: ProcessStatus.RUNNING, startTime: currentTime };
+        dispatch(updateProcess(updatedAvailableProcess));
+        console.log(`Time ${currentTime}: Process ${updatedProcess.id} PREEMPTED by Process ${availableProcess.id}`);
+        console.log("updated process is ", getState().processes.processes.find(p => p.id === updatedProcess.id));
+      }
+    }
 
-    if (updatedProcess.remainingTime <= 0) {
+    if (!preemptionOccured) {
+      updatedProcess.remainingTime--;
+      console.log(`Time ${currentTime}: time subtracted for process ${updatedProcess.id} (${updatedProcess.remainingTime} left)`);
+    }
+
+    if (!preemptionOccured && updatedProcess.remainingTime <= 0) {
       updatedProcess.status = ProcessStatus.COMPLETED;
       updatedProcess.endTime = currentTime;
       updatedProcess.remainingTime = 0;
       nextActiveProcessId = null;
       dispatch(updateProcess(updatedProcess));
       dispatch(setActiveProcess(null));
-      console.log(`Time ${nextTime}: Process ${updatedProcess.id} COMPLETED`);
-    } else {
+      console.log(`Time ${currentTime}: Process ${updatedProcess.id} COMPLETED`);
+    } else if (!preemptionOccured) {
+      console.log("PREEEKLjdfjks");
       dispatch(updateProcess(updatedProcess));
-      console.log(`Time ${nextTime}: Process ${updatedProcess.id} RUNNING (${updatedProcess.remainingTime} left)`);
+      console.log(`Time ${currentTime}: Process ${updatedProcess.id} RUNNING (${updatedProcess.remainingTime} left)`);
     }
   } else {
     nextActiveProcessId = null;
@@ -72,7 +96,7 @@ export const simulationTick = createAsyncThunk<void, void, {
       }
 
       if (nextProcess) {
-        console.log(`Time ${nextTime}: Selecting Process ${nextProcess.id} (${selectedAlgorithm})`);
+        console.log(`Time ${currentTime}: Selecting Process ${nextProcess.id} (${selectedAlgorithm})`);
         nextActiveProcessId = nextProcess.id;
         dispatch(setActiveProcess(nextProcess.id));
 
@@ -84,27 +108,30 @@ export const simulationTick = createAsyncThunk<void, void, {
             status: ProcessStatus.RUNNING,
           };
           dispatch(updateProcess(startedProcess));
-          console.log(`Time ${nextTime}: Process ${startedProcess.id} STARTED (${startedProcess.remainingTime} left)`);
+          console.log(`Time ${currentTime}: Process ${startedProcess.id} STARTED (${startedProcess.remainingTime} left)`);
         } else if (processInStore && processInStore.status !== ProcessStatus.RUNNING) {
-          const resumedProcess = { ...processInStore, status: ProcessStatus.RUNNING };
+          const resumedProcess = {
+            ...processInStore,
+            status: ProcessStatus.RUNNING,
+          };
           dispatch(updateProcess(resumedProcess));
-          console.log(`Time ${nextTime}: Process ${resumedProcess.id} RESUMED (${resumedProcess.remainingTime} left)`);
+          console.log(`Time ${currentTime}: Process ${resumedProcess.id} RESUMED (${resumedProcess.remainingTime} left)`);
         }
 
         cpuWasIdleThisTick = false;
 
       } else {
-        console.log(`Time ${nextTime}: Ready processes exist, but none chosen?`);
+        console.log(`Time ${currentTime}: Ready processes exist, but none chosen?`);
       }
     } else {
-      console.log(`Time ${nextTime}: No ready processes to run.`);
+      console.log(`Time ${currentTime}: No ready processes to run.`);
     }
   }
 
   if (cpuWasIdleThisTick && nextActiveProcessId === null) {
     dispatch(incrementIdleTime());
     dispatch(setSimulationStatus(SimulationStatus.IDLE));
-    console.log(`Time ${nextTime}: CPU Idle`);
+    console.log(`Time ${currentTime}: CPU Idle`);
   } else if (nextActiveProcessId !== null) {
     dispatch(setSimulationStatus(SimulationStatus.RUNNING));
   }
@@ -115,7 +142,7 @@ export const simulationTick = createAsyncThunk<void, void, {
   const allCompleted = allProcesses.length > 0 && allProcesses.every(p => p.status === ProcessStatus.COMPLETED);
 
   if (allCompleted) {
-    console.log(`Simulation Complete at time ${nextTime}`);
+    console.log(`Simulation Complete at time ${currentTime}`);
     dispatch(pauseSimulation()); // Stop the simulation interval
     dispatch(setSimulationStatus(SimulationStatus.PAUSED)); // Set final status
   } else {

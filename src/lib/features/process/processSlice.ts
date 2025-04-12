@@ -30,6 +30,7 @@ const processSlice = createSlice({
     },
     resetProcesses(state) {
       state.processes = [];
+      state.lastProcessId = 0;
     },
   },
 });

@@ -12,7 +12,7 @@ export interface Process {
   arrivalTime: number;
   burstTime: number;
   remainingTime: number;
-  priority?: number;
+  priority: number;
   startTime: number | undefined;
   endTime: number | undefined;
 }

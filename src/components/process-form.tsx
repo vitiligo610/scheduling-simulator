@@ -26,8 +26,7 @@ const createProcessFormSchema = (minArrivalTime: number) =>
     priority: z.coerce
       .number({ invalid_type_error: "Priority must be a number." })
       .min(1, { message: "Priority must be at least 1." })
-      .int({ message: "Priority must be an integer." })
-      .optional(),
+      .int({ message: "Priority must be an integer." }),
   });
 
 const ProcessForm = () => {

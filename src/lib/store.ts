@@ -10,6 +10,9 @@ export const makeStore = () =>
       scheduler: schedulerReducer,
       metrics: metricsReducer,
     },
+    devTools: {
+      maxAge: 1000,
+    },
   });
 
 export type AppStore = ReturnType<typeof makeStore>;
