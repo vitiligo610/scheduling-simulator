@@ -4,12 +4,19 @@ import { NavigationMenuItem } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, RotateCw, Share } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { pauseSimulation, startSimulation } from "@/lib/features/scheduler/schedulerSlice";
+import { pauseSimulation, resetSimulation, startSimulation } from "@/lib/features/scheduler/schedulerSlice";
 import { resetProcesses } from "@/lib/features/process/processSlice";
+import { resetMetrics } from "@/lib/features/metrics/metricsSlice";
 
 const SimulationControls = () => {
   const dispatch = useAppDispatch();
   const scheduler = useAppSelector(state => state.scheduler);
+
+  const reset = () => {
+    dispatch(resetProcesses());
+    dispatch(resetSimulation());
+    dispatch(resetMetrics());
+  };
 
   return (
     <>
@@ -24,7 +31,7 @@ const SimulationControls = () => {
         </Button>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <Button variant="destructive" onClick={() => dispatch(resetProcesses())}>
+        <Button variant="destructive" onClick={reset}>
           <RotateCw /> Reset
         </Button>
       </NavigationMenuItem>

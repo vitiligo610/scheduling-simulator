@@ -30,13 +30,13 @@ const AlgorithmSelector = () => {
             <SelectItem value="fcfs">First-Come, First-Served (FCFS)</SelectItem>
             <SelectItem value="sjf">Shortest Job First (SJF)</SelectItem>
             <SelectItem value="priority">Priority</SelectItem>
-            <SelectItem value="rr">Round Robin</SelectItem>
+            <SelectItem value="rr">Round Robin (RR)</SelectItem>
             <SelectItem value="mlfq">Multi-Level Feedback Queue (MLFQ)</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <div className="space-y-3">
-        <Label htmlFor="time-quantum" className="mt-0.5">Time Quantum</Label>
+        <Label htmlFor="time-quantum" className="mt-0.5">Time Quantum (for RR)</Label>
         <Input id="time-quantum" type="number" min="1" placeholder="2" value={scheduler.quantum}
                onChange={e => dispatch(setQuantum(Number(e.target.value)))} />
       </div>
@@ -45,7 +45,7 @@ const AlgorithmSelector = () => {
           Preemptive Mode
         </Label>
         <Checkbox id="preemptive" checked={!!scheduler.preemptive}
-                  onCheckedChange={(_checked) => dispatch(togglePremeption())} />
+                  onCheckedChange={() => dispatch(togglePremeption())} />
       </div>
     </div>
   );

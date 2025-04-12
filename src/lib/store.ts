@@ -1,12 +1,14 @@
 import { configureStore } from "@reduxjs/toolkit";
 import processReducer from "./features/process/processSlice";
 import schedulerReducer from "./features/scheduler/schedulerSlice";
+import metricsReducer from "./features/metrics/metricsSlice";
 
 export const makeStore = () =>
   configureStore({
     reducer: {
       processes: processReducer,
       scheduler: schedulerReducer,
+      metrics: metricsReducer,
     },
   });
 

@@ -7,6 +7,7 @@ import { ProcessStatus } from "@/lib/definitions";
 
 const ProcessQueue = () => {
   const processes = useAppSelector(state => state.processes.processes);
+  const scheduler = useAppSelector(state => state.scheduler);
 
   return (
     <div className="rounded-md border flex flex-col h-full">
@@ -19,24 +20,29 @@ const ProcessQueue = () => {
           <TableHeader>
             <TableRow className="">
               <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">ID</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">BURST</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">ARRIVAL</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">REMAINING</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">PRIORITY</TableHead>
               <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">STATUS</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">PRIORITY</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">ARRIVAL</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">BURST</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">REMAINING</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">START</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">END</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {processes.map((process) => (
               <TableRow key={process.id} className="border-t">
-                <TableCell className="p-3 font-medium">{process.id}</TableCell>
-                <TableCell className="p-3">{process.burstTime}</TableCell>
-                <TableCell className="p-3">{process.arrivalTime}</TableCell>
-                <TableCell className="p-3">{process.remainingTime}</TableCell>
-                <TableCell className="p-3">{process.priority}</TableCell>
+                <TableCell className="p-3 font-medium">P{process.id}</TableCell>
                 <TableCell className="p-3">
-                  <ProcessStatusBadge status={process.status as ProcessStatus} />
+                  <ProcessStatusBadge
+                    status={process.id === scheduler.activeProcessId ? ProcessStatus.RUNNING : process.status as ProcessStatus} />
                 </TableCell>
+                <TableCell className="p-3">{process.priority}</TableCell>
+                <TableCell className="p-3">{process.arrivalTime}</TableCell>
+                <TableCell className="p-3">{process.burstTime}</TableCell>
+                <TableCell className="p-3">{process.remainingTime}</TableCell>
+                <TableCell className="p-3">{process.startTime !== undefined ? process.startTime : "-"}</TableCell>
+                <TableCell className="p-3">{process.endTime || "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

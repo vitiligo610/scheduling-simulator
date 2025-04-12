@@ -3,6 +3,8 @@ import { SchedulingAlgorithm, SimulationState, SimulationStatus } from "@/lib/de
 
 const initialState: SimulationState = {
   currentTime: 0,
+  totalBusyTime: 0,
+  totalIdleTime: 0,
   isRunning: false,
   selectedAlgorithm: SchedulingAlgorithm.FCFS,
   quantum: 4,
@@ -27,9 +29,16 @@ const schedulerSlice = createSlice({
       state.currentTime = 0;
       state.activeProcessId = null;
       state.isRunning = false;
+      state.status = SimulationStatus.PAUSED;
     },
     incrementTime(state) {
       state.currentTime++;
+    },
+    incrementBusyTime(state) {
+      state.totalBusyTime++;
+    },
+    incrementIdleTime(state) {
+      state.totalIdleTime++;
     },
     setSimulationStatus(state, action: PayloadAction<SimulationStatus>) {
       state.status = action.payload;
@@ -54,6 +63,8 @@ export const {
   pauseSimulation,
   resetSimulation,
   incrementTime,
+  incrementBusyTime,
+  incrementIdleTime,
   setSimulationStatus,
   setAlgorithm,
   setQuantum,

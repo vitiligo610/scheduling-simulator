@@ -33,10 +33,29 @@ export enum SimulationStatus {
 
 export interface SimulationState {
   currentTime: number;
+  totalBusyTime: number;
+  totalIdleTime: number;
   isRunning: boolean;
   selectedAlgorithm: SchedulingAlgorithm;
   quantum?: number;
   activeProcessId?: number | null;
   status: SimulationStatus;
-  preemptive: Boolean;
+  preemptive: boolean;
+}
+
+export interface MetricsState {
+  averageWaitingTime: number;
+  averageTurnaroundTime: number;
+  cpuUtilization: number;
+  throughput: number;
+  completionOrder: number[];
+  lastCalculationTime: number;
+}
+
+export interface PerformanceMetrics {
+  avgTurnaroundTime: number;
+  avgWaitingTime: number;
+  avgResponseTime: number;
+  cpuUsage: number;
+  throughput: number;
 }
