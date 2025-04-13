@@ -13,7 +13,7 @@ const AlgorithmSelector = () => {
   const scheduler = useAppSelector(state => state.scheduler);
 
   return (
-    <div className="grid grid-cols-3 gap-6">
+    <div className="flex-shrink-0 grid grid-cols-3 gap-6">
       <div className="space-y-2">
         <Label htmlFor="algorithm" className="text-sm">
           Scheduling Algorithm

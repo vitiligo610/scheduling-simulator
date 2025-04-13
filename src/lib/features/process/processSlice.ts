@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Process } from "@/lib/definitions";
+import { Process, ProcessStatus } from "@/lib/definitions";
 
 interface ProcessState {
   processes: Process[];
@@ -28,13 +28,25 @@ const processSlice = createSlice({
       );
       if (index !== -1) state.processes[index] = action.payload;
     },
-    resetProcesses(state) {
+    resetProcesses(state, action: PayloadAction<number>) {
+      state.processes = state.processes.map(p => ({
+        ...p,
+        remainingTime: p.burstTime,
+        startTime: undefined,
+        endTime: undefined,
+        status: ProcessStatus.READY,
+        arrivalTime: p.arrivalTime + (action.payload ?? 0),
+        startedAt: [],
+        stoppedAt: [],
+      }));
+    },
+    clearProcesses(state) {
       state.processes = [];
       state.lastProcessId = 0;
     },
   },
 });
 
-export const { addProcess, removeProcess, updateProcess, resetProcesses } =
+export const { addProcess, removeProcess, updateProcess, resetProcesses, clearProcesses } =
   processSlice.actions;
 export default processSlice.reducer;

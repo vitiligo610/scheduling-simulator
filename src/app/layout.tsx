@@ -25,6 +25,9 @@ const RootLayout = ({ children }: Readonly<{
   children: React.ReactNode;
 }>) => (
   <html lang="en" suppressHydrationWarning>
+  <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt/dist/frappe-gantt.css" />
+  </head>
   <body
     className={`${geistSans.variable} ${geistMono.variable} antialiased`}
   >

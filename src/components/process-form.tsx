@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import randomColor from "randomcolor";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,9 @@ const ProcessForm = () => {
       startTime: undefined,
       endTime: undefined,
       status: ProcessStatus.READY,
+      color: randomColor({ luminosity: "dark", format: "hex" }),
+      startedAt: [],
+      stoppedAt: [],
     };
 
     dispatch(addProcess(newProcessData));

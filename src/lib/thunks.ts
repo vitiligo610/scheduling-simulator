@@ -42,8 +42,14 @@ export const simulationTick = createAsyncThunk<void, void, {
         dispatch(setActiveProcess(availableProcess.id));
         updatedProcess.status = ProcessStatus.READY;
         updatedProcess.remainingTime--;
+        updatedProcess.stoppedAt = [...updatedProcess.stoppedAt, currentTime];
         dispatch(updateProcess(updatedProcess));
-        const updatedAvailableProcess = { ...availableProcess, status: ProcessStatus.RUNNING, startTime: currentTime };
+        const updatedAvailableProcess = {
+          ...availableProcess,
+          status: ProcessStatus.RUNNING,
+          startTime: currentTime,
+          startedAt: [...availableProcess.startedAt, currentTime],
+        };
         dispatch(updateProcess(updatedAvailableProcess));
         console.log(`Time ${currentTime}: Process ${updatedProcess.id} PREEMPTED by Process ${availableProcess.id}`);
         console.log("updated process is ", getState().processes.processes.find(p => p.id === updatedProcess.id));
@@ -59,6 +65,7 @@ export const simulationTick = createAsyncThunk<void, void, {
       updatedProcess.status = ProcessStatus.COMPLETED;
       updatedProcess.endTime = currentTime;
       updatedProcess.remainingTime = 0;
+      updatedProcess.stoppedAt = [...updatedProcess.stoppedAt, currentTime];
       nextActiveProcessId = null;
       dispatch(updateProcess(updatedProcess));
       dispatch(setActiveProcess(null));
@@ -75,24 +82,22 @@ export const simulationTick = createAsyncThunk<void, void, {
 
   if (nextActiveProcessId === null) {
     let nextProcess: Process | null = null;
-    const readyProcesses = getState().processes.processes.filter((p) =>
-      p.arrivalTime <= currentTime && p.status !== ProcessStatus.COMPLETED,
-    );
+    const currentProcesses = getState().processes.processes;
 
-    if (readyProcesses.length > 0) {
+    if (currentProcesses.length > 0) {
       switch (selectedAlgorithm) {
         case SchedulingAlgorithm.FCFS:
-          nextProcess = fcfsScheduler(currentTime, readyProcesses);
+          nextProcess = fcfsScheduler(currentTime, currentProcesses);
           break;
         case SchedulingAlgorithm.SJF:
-          nextProcess = sjfScheduler(currentTime, readyProcesses);
+          nextProcess = sjfScheduler(currentTime, currentProcesses);
           break;
         case SchedulingAlgorithm.PRIORITY:
-          nextProcess = priorityScheduler(currentTime, readyProcesses);
+          nextProcess = priorityScheduler(currentTime, currentProcesses);
           break;
         default:
           console.warn("Using FCFS for unhandled/placeholder algorithm");
-          nextProcess = fcfsScheduler(currentTime, readyProcesses);
+          nextProcess = fcfsScheduler(currentTime, currentProcesses);
       }
 
       if (nextProcess) {
@@ -106,6 +111,7 @@ export const simulationTick = createAsyncThunk<void, void, {
             ...processInStore,
             startTime: currentTime,
             status: ProcessStatus.RUNNING,
+            startedAt: [currentTime],
           };
           dispatch(updateProcess(startedProcess));
           console.log(`Time ${currentTime}: Process ${startedProcess.id} STARTED (${startedProcess.remainingTime} left)`);
@@ -113,6 +119,7 @@ export const simulationTick = createAsyncThunk<void, void, {
           const resumedProcess = {
             ...processInStore,
             status: ProcessStatus.RUNNING,
+            startedAt: [...processInStore.startedAt, currentTime],
           };
           dispatch(updateProcess(resumedProcess));
           console.log(`Time ${currentTime}: Process ${resumedProcess.id} RESUMED (${resumedProcess.remainingTime} left)`);

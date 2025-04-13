@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 
-
 const AboutDialog = () => (
   <Dialog>
     <DialogTrigger asChild>
@@ -29,7 +28,7 @@ const AboutDialog = () => (
             <li>Mushaf Ali Meesum</li>
             <li>Sibas Ayyub Khan</li>
             <li>Maj. Faiz ul Haq</li>
-            <li>Capt. Harron Ishaq</li>
+            <li>Capt. Haroon Ishaq</li>
           </ul>
         </div>
       </div>

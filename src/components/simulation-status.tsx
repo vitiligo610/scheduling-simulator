@@ -17,7 +17,7 @@ const SimulationStatus = () => {
         <span className="font-semibold">{scheduler.activeProcessId ? `P${scheduler.activeProcessId}` : "None"}</span>
       </div>
       <div className="flex flex-col items-start justify-center w-[120px] gap-1">
-        <SimulationStatusBadge status={scheduler.status} />
+        <SimulationStatusBadge />
       </div>
     </div>
   );

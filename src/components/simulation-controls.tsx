@@ -13,7 +13,7 @@ const SimulationControls = () => {
   const scheduler = useAppSelector(state => state.scheduler);
 
   const reset = () => {
-    dispatch(resetProcesses());
+    dispatch(resetProcesses(0));
     dispatch(resetSimulation());
     dispatch(resetMetrics());
   };

@@ -15,6 +15,9 @@ export interface Process {
   priority: number;
   startTime: number | undefined;
   endTime: number | undefined;
+  color: string;
+  startedAt: number[];
+  stoppedAt: number[];
 }
 
 export enum SchedulingAlgorithm {

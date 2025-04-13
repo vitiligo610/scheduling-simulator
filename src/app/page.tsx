@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { useEffect, useRef } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { simulationTick } from "@/lib/thunks";
+import { TICK_DURATION } from "@/lib/utils";
 
 const SimulatorPage = () => {
   const dispatch = useAppDispatch();
@@ -19,7 +20,7 @@ const SimulatorPage = () => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
         dispatch(simulationTick());
-      }, simulationSpeedMs);
+      }, TICK_DURATION);
       console.log("Simulation Interval Started");
 
     } else {

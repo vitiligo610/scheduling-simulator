@@ -126,3 +126,38 @@
     scrollbar-width: thin;
     scrollbar-color: var(--accent) transparent;
 }
+
+/* Example in global.css or similar */
+
+/* Style the main bar fill - Frappe might override this, hence the JS approach too */
+.gantt .bar-wrapper.gantt-process-1 .bar {
+    fill: #a3a6ff; /* Example Color for Process 1 */
+}
+
+.gantt .bar-wrapper.gantt-process-2 .bar {
+    fill: #7afcff; /* Example Color for Process 2 */
+}
+
+.gantt .bar-wrapper.gantt-process-3 .bar {
+    fill: #ffb3ba; /* Example Color for Process 3 */
+}
+
+/* Add more rules for other process IDs as needed */
+
+/* Optional: Style the progress bar fill (if progress is used) */
+.gantt .bar-wrapper[data-progress="100"] .bar-progress {
+    /* Maybe slightly darker or a fixed color for completed */
+    /* fill: rgba(0, 0, 0, 0.3); */
+}
+
+/* Ensure tooltips look okay */
+.frappe-gantt-popup {
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 12px;
+    white-space: nowrap; /* Prevent wrapping */
+    color: #333;
+}
