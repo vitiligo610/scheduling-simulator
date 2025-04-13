@@ -40,10 +40,12 @@ export interface SimulationState {
   totalIdleTime: number;
   isRunning: boolean;
   selectedAlgorithm: SchedulingAlgorithm;
-  quantum?: number;
+  quantum: number;
   activeProcessId?: number | null;
   status: SimulationStatus;
   preemptive: boolean;
+  currentQuantumUsed: number;
+  rrQueue: number[];
 }
 
 export interface MetricsState {

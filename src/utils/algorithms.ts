@@ -23,6 +23,8 @@ export const getReadyQueue = (algorithm: SchedulingAlgorithm, currentTime: numbe
         }
         return a.arrivalTime - b.arrivalTime;
       });
+    case SchedulingAlgorithm.RR:
+      return availableProcesses.sort((a, b) => a.arrivalTime - b.arrivalTime);
     default:
       return availableProcesses;
   }
@@ -55,16 +57,9 @@ export const priorityScheduler = (
 export const rrScheduler = (
   currentTime: number,
   queue: Process[],
-  lastExecutedIndex: number = 0, // Needs state management outside
-  quantum: number,
 ): Process | null => {
-  console.warn("RR Scheduler needs proper implementation for non-preemptive tick", lastExecutedIndex, quantum);
-  // Basic placeholder - selects next ready process cyclically
-  const readyQueue = getReadyQueue(SchedulingAlgorithm.RR, currentTime, queue);
-  if (readyQueue.length === 0) return null;
-  // This simple logic doesn't handle quantum correctly for non-preemptive tick-by-tick
-  // It just picks the next one in arrival order for now
-  return readyQueue.sort((a, b) => a.arrivalTime - b.arrivalTime)[0];
+  if (queue.length === 0) return null;
+  return getReadyQueue(SchedulingAlgorithm.PRIORITY, currentTime, queue)[0];
 };
 
 export const mlfqScheduler = (

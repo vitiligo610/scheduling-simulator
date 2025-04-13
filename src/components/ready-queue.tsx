@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppSelector } from "@/lib/hooks";
-import { SchedulingAlgorithm } from "@/lib/definitions";
+import { Process, SchedulingAlgorithm } from "@/lib/definitions";
 import React from "react";
 import { getReadyQueue } from "@/utils/algorithms";
 
@@ -9,7 +9,9 @@ const ReadyQueue = () => {
   const { processes: processesState } = useAppSelector(state => state.processes);
   const scheduler = useAppSelector(state => state.scheduler);
 
-  const processes = getReadyQueue(scheduler.selectedAlgorithm, scheduler.currentTime, processesState);
+  const processes = scheduler.selectedAlgorithm !== SchedulingAlgorithm.RR
+    ? getReadyQueue(scheduler.selectedAlgorithm, scheduler.currentTime, processesState)
+    : scheduler.rrQueue.map(i => (processesState.find(p => p.id === i) as Process));
 
   let sortByText: string;
 

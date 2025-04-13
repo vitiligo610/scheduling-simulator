@@ -12,7 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { addProcess } from "@/lib/features/process/processSlice";
-import { ProcessStatus } from "@/lib/definitions";
+import { ProcessStatus, SchedulingAlgorithm } from "@/lib/definitions";
+import { pushToRRQueue } from "@/lib/features/scheduler/schedulerSlice";
 
 const createProcessFormSchema = (minArrivalTime: number) =>
   z.object({
@@ -64,7 +65,9 @@ const ProcessForm = () => {
       stoppedAt: [],
     };
 
-    dispatch(addProcess(newProcessData));
+    const { payload } = dispatch(addProcess(newProcessData));
+    console.log("created payload ", payload);
+    if (scheduler.selectedAlgorithm === SchedulingAlgorithm.RR) dispatch(pushToRRQueue(payload.id));
     toast.success("Process added successfully!");
     form.reset();
   }

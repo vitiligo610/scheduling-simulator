@@ -5,12 +5,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { setAlgorithm, setQuantum, togglePremeption } from "@/lib/features/scheduler/schedulerSlice";
+import { pushToRRQueue, setAlgorithm, setQuantum, togglePremeption } from "@/lib/features/scheduler/schedulerSlice";
 import { SchedulingAlgorithm } from "@/lib/definitions";
+import { getReadyQueue } from "@/utils/algorithms";
 
 const AlgorithmSelector = () => {
   const dispatch = useAppDispatch();
   const scheduler = useAppSelector(state => state.scheduler);
+  const { processes } = useAppSelector(state => state.processes);
+
+  const selectAlgorithm = (algorithm: SchedulingAlgorithm) => {
+    dispatch(setAlgorithm(algorithm));
+    if (algorithm === SchedulingAlgorithm.RR) {
+      const readyProcesses = getReadyQueue(SchedulingAlgorithm.RR, scheduler.currentTime, processes);
+      readyProcesses.forEach(p => dispatch(pushToRRQueue(p.id)));
+    }
+  };
 
   return (
     <div className="flex-shrink-0 grid grid-cols-3 gap-6">
@@ -18,7 +28,7 @@ const AlgorithmSelector = () => {
         <Label htmlFor="algorithm" className="text-sm">
           Scheduling Algorithm
         </Label>
-        <Select onValueChange={value => dispatch(setAlgorithm(value as SchedulingAlgorithm))}
+        <Select onValueChange={value => selectAlgorithm(value as SchedulingAlgorithm)}
                 value={scheduler.selectedAlgorithm}>
           <SelectTrigger
             id="algorithm"

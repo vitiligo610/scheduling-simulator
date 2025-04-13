@@ -2,8 +2,12 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { RootState } from "@/lib/store";
 import {
   incrementIdleTime,
+  incrementQuantumUsed,
   incrementTime,
   pauseSimulation,
+  popFromRRQueue,
+  pushToRRQueue,
+  resetQuantumUsed,
   setActiveProcess,
   setSimulationStatus,
 } from "@/lib/features/scheduler/schedulerSlice";
@@ -17,19 +21,28 @@ export const simulationTick = createAsyncThunk<void, void, {
 }>("scheduler/simulationTick", async (_, { dispatch, getState }) => {
   const state = getState();
   const { scheduler, processes: processState } = state;
-  const { currentTime, activeProcessId, selectedAlgorithm, preemptive } = scheduler;
+  const {
+    currentTime,
+    activeProcessId,
+    selectedAlgorithm,
+    preemptive,
+    rrQueue,
+    currentQuantumUsed,
+    quantum,
+  } = scheduler;
   const processes = processState.processes;
 
   let currentProcess: Process | null | undefined = null;
   if (activeProcessId !== null) currentProcess = processes.find((p) => p.id === activeProcessId);
 
   let cpuWasIdleThisTick = false;
-  let preemptionOccured = false;
+  let preemptionOccurred = false;
+  let rrPreemptionOccurred = false;
   let nextActiveProcessId: number | null | undefined = activeProcessId;
 
   if (currentProcess && currentProcess.status !== ProcessStatus.COMPLETED) {
     const updatedProcess = { ...currentProcess };
-    if (preemptive && selectedAlgorithm !== SchedulingAlgorithm.FCFS) {
+    if (preemptive && selectedAlgorithm !== SchedulingAlgorithm.FCFS && selectedAlgorithm !== SchedulingAlgorithm.RR) {
       let availableProcess: Process | null = null;
       if (selectedAlgorithm === SchedulingAlgorithm.SJF) {
         availableProcess = processes.find(p => p.arrivalTime === currentTime && p.burstTime < updatedProcess.burstTime) ?? null;
@@ -37,7 +50,7 @@ export const simulationTick = createAsyncThunk<void, void, {
         availableProcess = processes.find(p => p.arrivalTime === currentTime && p.priority < updatedProcess.priority) ?? null;
       }
       if (availableProcess) {
-        preemptionOccured = true;
+        preemptionOccurred = true;
         nextActiveProcessId = availableProcess.id;
         dispatch(setActiveProcess(availableProcess.id));
         updatedProcess.status = ProcessStatus.READY;
@@ -56,12 +69,54 @@ export const simulationTick = createAsyncThunk<void, void, {
       }
     }
 
-    if (!preemptionOccured) {
+    // handle preemption for round-robin here
+    rrPreemptionOccurred = false;
+    if (selectedAlgorithm === SchedulingAlgorithm.RR) {
+      if (currentQuantumUsed >= quantum) {
+        console.log("somebody is here at time ", currentTime, "quantum", currentQuantumUsed, "/", quantum);
+        rrPreemptionOccurred = true;
+
+        let nextRRProcess: Process | null | undefined = null;
+
+        console.log("inside loop, rr queue is ", rrQueue);
+        const nextRRProcessId = rrQueue[0];
+        if (nextRRProcessId) {
+          nextRRProcess = processes.find(p => p.id === nextRRProcessId);
+          dispatch(popFromRRQueue());
+          console.log("nextRRProcessId is ", " process ", nextRRProcess);
+        }
+        dispatch(resetQuantumUsed());
+        updatedProcess.remainingTime--;
+        updatedProcess.stoppedAt = [...updatedProcess.stoppedAt, currentTime];
+        if (updatedProcess.remainingTime <= 0) {
+          updatedProcess.status = ProcessStatus.COMPLETED;
+          updatedProcess.endTime = currentTime;
+        } else {
+          updatedProcess.status = ProcessStatus.READY;
+          dispatch(pushToRRQueue(updatedProcess.id));
+        }
+        dispatch(updateProcess(updatedProcess));
+        console.log("next rr process is ", nextRRProcess);
+        console.log("rr queue is ", rrQueue);
+        if (nextRRProcess) {
+          dispatch(setActiveProcess(nextRRProcess.id));
+          const updatedAvailableProcess = {
+            ...nextRRProcess,
+            status: ProcessStatus.RUNNING,
+            startTime: nextRRProcess.startTime ?? currentTime,
+            startedAt: [...nextRRProcess.startedAt, currentTime],
+          };
+          dispatch(updateProcess(updatedAvailableProcess));
+        }
+      }
+    }
+
+    if (!preemptionOccurred && !rrPreemptionOccurred) {
       updatedProcess.remainingTime--;
       console.log(`Time ${currentTime}: time subtracted for process ${updatedProcess.id} (${updatedProcess.remainingTime} left)`);
     }
 
-    if (!preemptionOccured && updatedProcess.remainingTime <= 0) {
+    if (!preemptionOccurred && !rrPreemptionOccurred && updatedProcess.remainingTime <= 0) {
       updatedProcess.status = ProcessStatus.COMPLETED;
       updatedProcess.endTime = currentTime;
       updatedProcess.remainingTime = 0;
@@ -70,8 +125,7 @@ export const simulationTick = createAsyncThunk<void, void, {
       dispatch(updateProcess(updatedProcess));
       dispatch(setActiveProcess(null));
       console.log(`Time ${currentTime}: Process ${updatedProcess.id} COMPLETED`);
-    } else if (!preemptionOccured) {
-      console.log("PREEEKLjdfjks");
+    } else if (!preemptionOccurred) {
       dispatch(updateProcess(updatedProcess));
       console.log(`Time ${currentTime}: Process ${updatedProcess.id} RUNNING (${updatedProcess.remainingTime} left)`);
     }
@@ -94,6 +148,12 @@ export const simulationTick = createAsyncThunk<void, void, {
           break;
         case SchedulingAlgorithm.PRIORITY:
           nextProcess = priorityScheduler(currentTime, currentProcesses);
+          break;
+        case SchedulingAlgorithm.RR:
+          const nextProcessId = rrQueue[0];
+          if (nextProcessId) {
+            nextProcess = currentProcesses.find(p => p.id === nextProcessId) ?? null;
+          }
           break;
         default:
           console.warn("Using FCFS for unhandled/placeholder algorithm");
@@ -125,6 +185,12 @@ export const simulationTick = createAsyncThunk<void, void, {
           console.log(`Time ${currentTime}: Process ${resumedProcess.id} RESUMED (${resumedProcess.remainingTime} left)`);
         }
 
+        if (selectedAlgorithm === SchedulingAlgorithm.RR) {
+          console.log("on selection, before queue ", rrQueue);
+          dispatch(popFromRRQueue());
+          console.log("on selection, after queue ", getState().scheduler.rrQueue);
+        }
+
         cpuWasIdleThisTick = false;
 
       } else {
@@ -154,6 +220,11 @@ export const simulationTick = createAsyncThunk<void, void, {
     dispatch(setSimulationStatus(SimulationStatus.PAUSED)); // Set final status
   } else {
     dispatch(incrementTime());
+    if (selectedAlgorithm === SchedulingAlgorithm.RR) {
+      console.log("quantum before ", currentQuantumUsed);
+      dispatch(incrementQuantumUsed());
+      console.log("quntum after ", getState().scheduler.currentQuantumUsed);
+    }
   }
 
   console.log(`End of Tick ${currentTime}. Next Time: ${getState().scheduler.currentTime}. Status: ${getState().scheduler.status}`);
