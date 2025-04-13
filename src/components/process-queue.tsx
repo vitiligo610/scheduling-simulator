@@ -6,6 +6,7 @@ import { useAppSelector } from "@/lib/hooks";
 import { ProcessStatus, SchedulingAlgorithm } from "@/lib/definitions";
 import ProcessQueueButtons from "@/components/process-queue-buttons";
 import MlfqConfigDialog from "@/components/mlfq-config-dialog";
+import ProcessActionButtons from "@/components/process-action-buttons";
 
 const ProcessQueue = () => {
   const processes = useAppSelector(state => state.processes.processes);
@@ -23,14 +24,15 @@ const ProcessQueue = () => {
         <Table className="w-full overflow-x-hidden">
           <TableHeader>
             <TableRow className="">
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">ID</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">STATUS</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">PRIORITY</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">ARRIVAL</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">BURST</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">REMAINING</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">START</TableHead>
-              <TableHead className="text-xs text-muted-foreground p-3 sticky top-0">END</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">ID</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">STATUS</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">PRIORITY</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">ARRIVAL</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">BURST</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">REMAINING</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">START</TableHead>
+              <TableHead className="text-xs text-muted-foreground p-3">END</TableHead>
+              <TableHead className="sr-only">ACTIONS</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -47,6 +49,9 @@ const ProcessQueue = () => {
                 <TableCell className="p-3">{process.remainingTime}</TableCell>
                 <TableCell className="p-3">{process.startTime !== undefined ? process.startTime : "-"}</TableCell>
                 <TableCell className="p-3">{process.endTime || "-"}</TableCell>
+                <TableCell className="p-3 space-x-3">
+                  <ProcessActionButtons processId={process.id} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

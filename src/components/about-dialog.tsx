@@ -3,14 +3,25 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import React from "react";
 
 const AboutDialog = () => (
   <Dialog>
-    <DialogTrigger asChild>
-      <Button variant="outline" size="icon">
-        <HelpCircle />
-      </Button>
-    </DialogTrigger>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon">
+              <HelpCircle />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>About</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Orchestrator - Process Scheduling Simulator</DialogTitle>

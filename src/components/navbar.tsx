@@ -3,6 +3,7 @@ import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from "@/compon
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import SimulationControls from "@/components/simulation-controls";
 import AboutDialog from "@/components/about-dialog";
+import React from "react";
 
 const Navbar = () => (
   <div className="border-b">

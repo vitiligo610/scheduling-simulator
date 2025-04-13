@@ -14,6 +14,7 @@ import { resetProcesses } from "@/lib/features/process/processSlice";
 import { resetMetrics } from "@/lib/features/metrics/metricsSlice";
 import { SchedulingAlgorithm } from "@/lib/definitions";
 import { getReadyQueue } from "@/utils/algorithms";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const SimulationControls = () => {
   const dispatch = useAppDispatch();
@@ -47,9 +48,18 @@ const SimulationControls = () => {
         </Button>
       </NavigationMenuItem>
       <NavigationMenuItem>
-        <Button variant="outline" size="icon">
-          <Share />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Share />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Export to PNG</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </NavigationMenuItem></>
   );
 };
