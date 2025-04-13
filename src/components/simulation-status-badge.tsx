@@ -13,6 +13,7 @@ const SimulationStatusBadge = ({ className }: SimulationStatusBadgeProps) => {
     idle: "bg-slate-100 text-slate-800 hover:bg-slate-100 border-slate-200",
     running: "bg-green-100 text-green-800 hover:bg-green-100 border-green-200",
     paused: "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200",
+    completed: "bg-slate-100 text-slate-800 hover:bg-slate-100 border-slate-200",
   };
 
   const status = useAppSelector(state => state.scheduler.status);

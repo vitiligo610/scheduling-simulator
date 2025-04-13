@@ -13,221 +13,383 @@ import {
 } from "@/lib/features/scheduler/schedulerSlice";
 import { MetricsState, Process, ProcessStatus, SchedulingAlgorithm, SimulationStatus } from "@/lib/definitions";
 import { updateProcess } from "@/lib/features/process/processSlice";
-import { fcfsScheduler, priorityScheduler, sjfScheduler } from "@/utils/algorithms";
+import { fcfsScheduler } from "@/utils/algorithms";
 import { initialState as initialMetricsState } from "@/lib/features/metrics/metricsSlice";
+import {
+  cycleQueue,
+  incrementQueueQuantumUsed,
+  initializeProcessInMlfq,
+  moveProcess,
+  removeFromMlfqQueueFront,
+  removeProcessFromMlfq,
+  resetQueueQuantumUsed,
+} from "@/lib/features/mlfq/mlfqSlice";
 
 export const simulationTick = createAsyncThunk<void, void, {
   state: RootState
 }>("scheduler/simulationTick", async (_, { dispatch, getState }) => {
+  // --- Get Initial State ---
+  const initialTimestamp = Date.now();
   const state = getState();
-  const { scheduler, processes: processState } = state;
+  // Destructure all relevant states
+  const { scheduler, processes: processState, mlfq: mlfqState } = state;
   const {
     currentTime,
     activeProcessId,
     selectedAlgorithm,
     preemptive,
-    rrQueue,
-    currentQuantumUsed,
-    quantum,
+    currentQuantumUsed: globalRrQuantumUsed,
+    quantum: globalRrQuantum,
   } = scheduler;
   const processes = processState.processes;
+  console.log(`--- Tick Start: ${currentTime}, Algorithm: ${selectedAlgorithm}, Active: ${activeProcessId ?? "None"} ---`);
 
-  let currentProcess: Process | null | undefined = null;
-  if (activeProcessId !== null) currentProcess = processes.find((p) => p.id === activeProcessId);
+  // --- Step 1: Handle New Arrivals for MLFQ ---
+  if (selectedAlgorithm === SchedulingAlgorithm.MLFQ) {
+    // Find processes arriving now that aren't yet tracked by MLFQ
+    const newlyArrivedProcesses = processes.filter(p =>
+      p.arrivalTime === currentTime &&
+      mlfqState.processQueueMap[p.id] === undefined,
+    );
+    if (newlyArrivedProcesses.length > 0) {
+      console.log(`MLFQ: Initializing newly arrived: [${newlyArrivedProcesses.map(p => p.id).join(",")}]`);
+      newlyArrivedProcesses.forEach(p => {
+        // Only add if not completed (edge case: arrives and completes instantly?)
+        if (p.status !== ProcessStatus.COMPLETED) {
+          dispatch(initializeProcessInMlfq({ processId: p.id }));
+        }
+      });
+    }
+  }
+  // --- End Step 1 ---
 
-  let cpuWasIdleThisTick = false;
-  let preemptionOccurred = false;
-  let rrPreemptionOccurred = false;
-  let nextActiveProcessId: number | null | undefined = activeProcessId;
 
+  let currentProcess: Process | undefined = undefined;
+  if (activeProcessId !== null) {
+    currentProcess = processes.find((p) => p.id === activeProcessId);
+  }
+
+  let cpuWasIdleThisTick: boolean;
+  let preemptionOccurredSJF_Prio = false;
+  let rrPreemptionOccurred = false; // Standard RR preemption
+  let mlfqQuantumExpired = false;   // MLFQ quantum preemption
+  let nextActiveProcessId: number | null = activeProcessId ?? null;
+
+  // --- Step 2: Handle Active Process Execution ---
   if (currentProcess && currentProcess.status !== ProcessStatus.COMPLETED) {
-    const updatedProcess = { ...currentProcess };
-    if (preemptive && selectedAlgorithm !== SchedulingAlgorithm.FCFS && selectedAlgorithm !== SchedulingAlgorithm.RR) {
+    console.log(`Tick ${currentTime}: Active process = ${currentProcess.id} (${currentProcess.name})`);
+    cpuWasIdleThisTick = false;
+    const updatedProcess = { ...currentProcess }; // Work on a copy
+
+    // --- 2a: SJF/Priority Preemption Check ---
+    // *** Only run if NOT MLFQ ***
+    if (preemptive && selectedAlgorithm !== SchedulingAlgorithm.FCFS && selectedAlgorithm !== SchedulingAlgorithm.RR && selectedAlgorithm !== SchedulingAlgorithm.MLFQ) {
       let availableProcess: Process | null = null;
       if (selectedAlgorithm === SchedulingAlgorithm.SJF) {
         availableProcess = processes.find(p => p.arrivalTime === currentTime && p.burstTime < updatedProcess.burstTime) ?? null;
       } else if (selectedAlgorithm === SchedulingAlgorithm.PRIORITY) {
-        availableProcess = processes.find(p => p.arrivalTime === currentTime && p.priority < updatedProcess.priority) ?? null;
+        availableProcess = processes.find(p => p.arrivalTime === currentTime && (p.priority ?? Infinity) < (updatedProcess.priority ?? Infinity)) ?? null; // Check priority correctly
       }
       if (availableProcess) {
-        preemptionOccurred = true;
-        nextActiveProcessId = availableProcess.id;
-        dispatch(setActiveProcess(availableProcess.id));
+        console.log(`SJF/Priority Preemption Check: Found potential preemptor ${availableProcess.id}`);
+        preemptionOccurredSJF_Prio = true;
+        nextActiveProcessId = availableProcess.id; // Preempt!
+        // Update preempted process
         updatedProcess.status = ProcessStatus.READY;
-        updatedProcess.remainingTime--;
-        updatedProcess.stoppedAt = [...updatedProcess.stoppedAt, currentTime];
+        updatedProcess.remainingTime--; // Don't decrement time if preempted before running
+        updatedProcess.stoppedAt = [...(updatedProcess.stoppedAt ?? []), currentTime]; // Record stop time
         dispatch(updateProcess(updatedProcess));
+        // Update new process
         const updatedAvailableProcess = {
           ...availableProcess,
           status: ProcessStatus.RUNNING,
-          startTime: currentTime,
-          startedAt: [...availableProcess.startedAt, currentTime],
+          startTime: availableProcess.startTime ?? currentTime, // Use existing startTime if resuming
+          startedAt: [...(availableProcess.startedAt ?? []), currentTime], // Record start/resume time
         };
         dispatch(updateProcess(updatedAvailableProcess));
+        dispatch(setActiveProcess(availableProcess.id)); // Set new active process
         console.log(`Time ${currentTime}: Process ${updatedProcess.id} PREEMPTED by Process ${availableProcess.id}`);
-        console.log("updated process is ", getState().processes.processes.find(p => p.id === updatedProcess.id));
       }
     }
 
-    // handle preemption for round-robin here
-    rrPreemptionOccurred = false;
-    if (selectedAlgorithm === SchedulingAlgorithm.RR) {
-      if (currentQuantumUsed >= quantum) {
-        console.log("somebody is here at time ", currentTime, "quantum", currentQuantumUsed, "/", quantum);
-        rrPreemptionOccurred = true;
-
-        let nextRRProcess: Process | null | undefined = null;
-
-        console.log("inside loop, rr queue is ", rrQueue);
-        const nextRRProcessId = rrQueue[0];
-        if (nextRRProcessId) {
-          nextRRProcess = processes.find(p => p.id === nextRRProcessId);
-          dispatch(popFromRRQueue());
-          console.log("nextRRProcessId is ", " process ", nextRRProcess);
-        }
-        dispatch(resetQuantumUsed());
-        updatedProcess.remainingTime--;
-        updatedProcess.stoppedAt = [...updatedProcess.stoppedAt, currentTime];
-        if (updatedProcess.remainingTime <= 0) {
-          updatedProcess.status = ProcessStatus.COMPLETED;
-          updatedProcess.endTime = currentTime;
-        } else {
-          updatedProcess.status = ProcessStatus.READY;
-          dispatch(pushToRRQueue(updatedProcess.id));
-        }
-        dispatch(updateProcess(updatedProcess));
-        console.log("next rr process is ", nextRRProcess);
-        console.log("rr queue is ", rrQueue);
-        if (nextRRProcess) {
-          dispatch(setActiveProcess(nextRRProcess.id));
-          const updatedAvailableProcess = {
-            ...nextRRProcess,
-            status: ProcessStatus.RUNNING,
-            startTime: nextRRProcess.startTime ?? currentTime,
-            startedAt: [...nextRRProcess.startedAt, currentTime],
-          };
-          dispatch(updateProcess(updatedAvailableProcess));
-        }
-      }
-    }
-
-    if (!preemptionOccurred && !rrPreemptionOccurred) {
+    // --- 2b: Execute Tick (if not preempted by SJF/Priority) ---
+    if (!preemptionOccurredSJF_Prio) {
+      // *** DECREMENT TIME FIRST ***
       updatedProcess.remainingTime--;
-      console.log(`Time ${currentTime}: time subtracted for process ${updatedProcess.id} (${updatedProcess.remainingTime} left)`);
-    }
+      console.log(`Tick ${currentTime}: Decremented ${updatedProcess.id}. Remaining: ${updatedProcess.remainingTime}`);
 
-    if (!preemptionOccurred && !rrPreemptionOccurred && updatedProcess.remainingTime <= 0) {
-      updatedProcess.status = ProcessStatus.COMPLETED;
-      updatedProcess.endTime = currentTime;
-      updatedProcess.remainingTime = 0;
-      updatedProcess.stoppedAt = [...updatedProcess.stoppedAt, currentTime];
-      nextActiveProcessId = null;
-      dispatch(updateProcess(updatedProcess));
-      dispatch(setActiveProcess(null));
-      console.log(`Time ${currentTime}: Process ${updatedProcess.id} COMPLETED`);
-    } else if (!preemptionOccurred) {
-      dispatch(updateProcess(updatedProcess));
-      console.log(`Time ${currentTime}: Process ${updatedProcess.id} RUNNING (${updatedProcess.remainingTime} left)`);
-    }
-  } else {
-    nextActiveProcessId = null;
-    cpuWasIdleThisTick = true;
-  }
+      let processCompleted = false;
 
-  if (nextActiveProcessId === null) {
-    let nextProcess: Process | null = null;
-    const currentProcesses = getState().processes.processes;
-
-    if (currentProcesses.length > 0) {
-      switch (selectedAlgorithm) {
-        case SchedulingAlgorithm.FCFS:
-          nextProcess = fcfsScheduler(currentTime, currentProcesses);
-          break;
-        case SchedulingAlgorithm.SJF:
-          nextProcess = sjfScheduler(currentTime, currentProcesses);
-          break;
-        case SchedulingAlgorithm.PRIORITY:
-          nextProcess = priorityScheduler(currentTime, currentProcesses);
-          break;
-        case SchedulingAlgorithm.RR:
-          const nextProcessId = rrQueue[0];
-          if (nextProcessId) {
-            nextProcess = currentProcesses.find(p => p.id === nextProcessId) ?? null;
+      // *** Algorithm-Specific Checks (Quantum, etc.) ***
+      if (selectedAlgorithm === SchedulingAlgorithm.RR) {
+        dispatch(incrementQuantumUsed()); // Increment global RR counter
+        const quantumUsedAfterTick = globalRrQuantumUsed + 1;
+        console.log(`Tick ${currentTime}: RR Quantum for ${updatedProcess.id}. Used: ${quantumUsedAfterTick}/${globalRrQuantum}`);
+        if (updatedProcess.remainingTime <= 0) {
+          processCompleted = true;
+        } else if (quantumUsedAfterTick >= globalRrQuantum) {
+          console.log(`Tick ${currentTime}: RR Quantum EXPIRED for ${updatedProcess.id}.`);
+          rrPreemptionOccurred = true; // Mark RR preemption
+          nextActiveProcessId = null;
+          updatedProcess.status = ProcessStatus.READY;
+          updatedProcess.stoppedAt = [...(updatedProcess.stoppedAt ?? []), currentTime];
+          dispatch(pushToRRQueue(updatedProcess.id)); // Add back to end of RR queue
+          dispatch(resetQuantumUsed()); // Reset global counter
+        }
+      } else if (selectedAlgorithm === SchedulingAlgorithm.MLFQ) {
+        const currentProcessQueueId = mlfqState.processQueueMap[updatedProcess.id];
+        const queueConfig = mlfqState.queuesConfig[currentProcessQueueId];
+        if (currentProcessQueueId !== undefined && queueConfig) {
+          dispatch(incrementQueueQuantumUsed({ processId: updatedProcess.id }));
+          // Read state again after dispatch to get the truly updated value
+          const quantumUsedInQueue = getState().mlfq.currentQueueQuantumUsed[updatedProcess.id];
+          console.log(`Tick ${currentTime}: MLFQ Quantum for ${updatedProcess.id} in Q${currentProcessQueueId}. Used: ${quantumUsedInQueue}/${queueConfig.quantum}`);
+          if (updatedProcess.remainingTime <= 0) {
+            processCompleted = true;
+          } else if (quantumUsedInQueue >= queueConfig.quantum) {
+            console.log(`Tick ${currentTime}: MLFQ Quantum EXPIRED for ${updatedProcess.id} in Q${currentProcessQueueId}.`);
+            mlfqQuantumExpired = true; // Mark MLFQ preemption
+            nextActiveProcessId = null;
+            // Handle Demotion/Cycling
+            const nextQueueId = currentProcessQueueId + 1;
+            if (nextQueueId < mlfqState.numQueues) {
+              console.log(`MLFQ: Demoting ${updatedProcess.id} from Q${currentProcessQueueId} to Q${nextQueueId}`);
+              dispatch(moveProcess({ processId: updatedProcess.id, targetQueueId: nextQueueId }));
+            } else {
+              console.log(`MLFQ: Cycling ${updatedProcess.id} in lowest Q${currentProcessQueueId}`);
+              dispatch(cycleQueue({ queueId: currentProcessQueueId }));
+              dispatch(resetQueueQuantumUsed({ processId: updatedProcess.id }));
+            }
+            updatedProcess.status = ProcessStatus.READY;
+            updatedProcess.stoppedAt = [...(updatedProcess.stoppedAt ?? []), currentTime];
           }
-          break;
-        default:
-          console.warn("Using FCFS for unhandled/placeholder algorithm");
-          nextProcess = fcfsScheduler(currentTime, currentProcesses);
+        } else {
+          console.error(`MLFQ Error: Process ${updatedProcess.id} active but state invalid! QID: ${currentProcessQueueId}`);
+          // Process might complete or continue without proper quantum tracking
+          if (updatedProcess.remainingTime <= 0) processCompleted = true;
+        }
+      } else { // FCFS, Non-preemptive SJF/Priority
+        if (updatedProcess.remainingTime <= 0) {
+          processCompleted = true;
+        }
       }
 
-      if (nextProcess) {
-        console.log(`Time ${currentTime}: Selecting Process ${nextProcess.id} (${selectedAlgorithm})`);
-        nextActiveProcessId = nextProcess.id;
-        dispatch(setActiveProcess(nextProcess.id));
+      // *** Handle Completion OR Dispatch Update ***
+      if (processCompleted) {
+        console.log(`Tick ${currentTime}: Process ${updatedProcess.id} COMPLETED.`);
+        updatedProcess.status = ProcessStatus.COMPLETED;
+        updatedProcess.endTime = currentTime; // End of this tick
+        updatedProcess.remainingTime = 0;
+        updatedProcess.stoppedAt = [...(updatedProcess.stoppedAt ?? []), currentTime]; // Mark final stop
+        nextActiveProcessId = null; // Free CPU
+        dispatch(updateProcess(updatedProcess));
+        dispatch(setActiveProcess(null)); // Free CPU state
 
-        const processInStore = getState().processes.processes.find(p => p.id === nextProcess!.id);
-        if (processInStore && processInStore.startTime === undefined) {
-          const startedProcess = {
-            ...processInStore,
-            startTime: currentTime,
-            status: ProcessStatus.RUNNING,
-            startedAt: [currentTime],
-          };
-          dispatch(updateProcess(startedProcess));
-          console.log(`Time ${currentTime}: Process ${startedProcess.id} STARTED (${startedProcess.remainingTime} left)`);
-        } else if (processInStore && processInStore.status !== ProcessStatus.RUNNING) {
-          const resumedProcess = {
-            ...processInStore,
-            status: ProcessStatus.RUNNING,
-            startedAt: [...processInStore.startedAt, currentTime],
-          };
-          dispatch(updateProcess(resumedProcess));
-          console.log(`Time ${currentTime}: Process ${resumedProcess.id} RESUMED (${resumedProcess.remainingTime} left)`);
+        // --- MLFQ Cleanup on Completion ---
+        if (selectedAlgorithm === SchedulingAlgorithm.MLFQ) {
+          const queueId = mlfqState.processQueueMap[updatedProcess.id]; // Get queue ID before removing from map
+          console.log(`MLFQ: Removing completed process ${updatedProcess.id} from state (was in Q${queueId}).`);
+          dispatch(removeProcessFromMlfq({ processId: updatedProcess.id }));
         }
+        // --- End MLFQ Cleanup ---
 
-        if (selectedAlgorithm === SchedulingAlgorithm.RR) {
-          console.log("on selection, before queue ", rrQueue);
-          dispatch(popFromRRQueue());
-          console.log("on selection, after queue ", getState().scheduler.rrQueue);
-        }
-
-        cpuWasIdleThisTick = false;
+      } else if (rrPreemptionOccurred || mlfqQuantumExpired) {
+        // Process was preempted by quantum expiry
+        dispatch(updateProcess(updatedProcess)); // Update status/stoppedAt
+        dispatch(setActiveProcess(null)); // Free CPU state
 
       } else {
-        console.log(`Time ${currentTime}: Ready processes exist, but none chosen?`);
+        // Process continues running (not completed, not preempted by quantum)
+        dispatch(updateProcess(updatedProcess)); // Update remaining time
+        console.log(`Tick ${currentTime}: Process ${updatedProcess.id} continues running.`);
       }
-    } else {
-      console.log(`Time ${currentTime}: No ready processes to run.`);
-    }
+    } // End if (!preemptionOccurredSJF_Prio)
+  } else {
+    // CPU was idle initially OR active process was already completed
+    console.log(`Tick ${currentTime}: CPU Idle or process already completed.`);
+    nextActiveProcessId = null;
+    cpuWasIdleThisTick = true;
+    // Reset necessary quanta if CPU is unexpectedly idle
+    if (selectedAlgorithm === SchedulingAlgorithm.RR && globalRrQuantumUsed > 0) dispatch(resetQuantumUsed());
+    // Can't reset MLFQ quantum easily without knowing which process *was* running
   }
+  // --- End Step 2 ---
 
-  if (cpuWasIdleThisTick && nextActiveProcessId === null) {
+
+  // --- Step 3: Select New Process (if CPU became free THIS tick) ---
+  // Check activeProcessId from the *updated* state
+  const currentActiveProcessId = getState().scheduler.activeProcessId;
+  if (currentActiveProcessId === null) {
+    let nextProcessToSchedule: Process | null = null;
+    const latestProcesses = getState().processes.processes;
+    const latestMlfqState = getState().mlfq; // Get latest MLFQ state if needed
+
+    console.log(`Tick ${currentTime}: CPU is free. Selecting next process using ${selectedAlgorithm}.`);
+
+    // --- 3a: MLFQ Scheduling Logic ---
+    if (selectedAlgorithm === SchedulingAlgorithm.MLFQ) {
+      for (let i = 0; i < latestMlfqState.numQueues; i++) {
+        const queueContent = latestMlfqState.queueContents[i];
+        if (queueContent && queueContent.length > 0) {
+          // Iterate through the queue in case the first isn't ready
+          let foundInQueue = false;
+          for (let j = 0; j < queueContent.length; j++) {
+            const processId = queueContent[j];
+            const potentialProcess = latestProcesses.find(p => p.id === processId);
+
+            if (potentialProcess && potentialProcess.status !== ProcessStatus.COMPLETED && potentialProcess.arrivalTime <= currentTime) {
+              console.log(`MLFQ: Found ready candidate ${processId} in Q${i}.`);
+              nextProcessToSchedule = potentialProcess;
+              // Remove from front of queue dispatch
+              dispatch(removeFromMlfqQueueFront({ queueId: i })); // Assumes it was at the front
+              foundInQueue = true;
+              break; // Found highest priority ready process in this queue
+            }
+            // Implicitly skips non-ready processes at the front. If one is found later,
+            // the earlier non-ready ones remain for now. A cleanup might be needed elsewhere.
+          }
+          if (foundInQueue) break; // Break outer loop if found in this queue level
+        }
+      }
+      if (!nextProcessToSchedule) {
+        console.log(`MLFQ: All queues checked, no ready process found.`);
+      }
+      // --- 3b: Other Algorithm Scheduling Logic ---
+    } else {
+      const readyProcesses = latestProcesses.filter(p => p.arrivalTime <= currentTime && p.status !== ProcessStatus.COMPLETED && p.status !== ProcessStatus.RUNNING);
+      console.log(`Tick ${currentTime}: ${selectedAlgorithm} Ready Processes: [${readyProcesses.map(p => p.id).join(",")}]`);
+      if (readyProcesses.length > 0) {
+        switch (selectedAlgorithm) {
+          case SchedulingAlgorithm.FCFS:
+            nextProcessToSchedule = fcfsScheduler(currentTime, readyProcesses); // Pass only ready
+            break;
+          case SchedulingAlgorithm.SJF:
+            // Pass only ready processes to SJF scheduler
+            if (preemptive) {
+              const sortedSRTF = [...readyProcesses].sort((a, b) => a.remainingTime - b.remainingTime);
+              nextProcessToSchedule = sortedSRTF[0] ?? null;
+            } else {
+              const sortedSJF = [...readyProcesses].sort((a, b) => a.burstTime - b.burstTime);
+              nextProcessToSchedule = sortedSJF[0] ?? null;
+            }
+            break;
+          case SchedulingAlgorithm.PRIORITY:
+            // Pass only ready processes to Priority scheduler
+            const sortedPriority = [...readyProcesses].sort((a, b) => (a.priority ?? Infinity) - (b.priority ?? Infinity));
+            nextProcessToSchedule = sortedPriority[0] ?? null;
+            break;
+          case SchedulingAlgorithm.RR:
+            const nextRRId = getState().scheduler.rrQueue[0]; // Get from RR state queue
+            if (nextRRId) {
+              // Ensure the process from rrQueue is actually in the ready list
+              const potentialProcess = readyProcesses.find(p => p.id === nextRRId);
+              if (potentialProcess) {
+                nextProcessToSchedule = potentialProcess;
+              } else {
+                console.warn(`RR: Process ${nextRRId} from rrQueue not found in ready list. Skipping.`);
+                // Might need logic to remove invalid ID from rrQueue here
+                dispatch(popFromRRQueue()); // Assume removal if invalid
+              }
+            }
+            break;
+          default:
+            console.warn("Using FCFS for unhandled/placeholder algorithm");
+            nextProcessToSchedule = fcfsScheduler(currentTime, readyProcesses);
+        }
+      }
+    }
+
+    // --- 3c: Start the Chosen Process ---
+    if (nextProcessToSchedule) {
+      console.log(`Tick ${currentTime}: SCHEDULING Process ${nextProcessToSchedule.id} (${selectedAlgorithm})`);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      nextActiveProcessId = nextProcessToSchedule.id; // Update local variable for logic below
+      dispatch(setActiveProcess(nextProcessToSchedule.id)); // Update global state
+
+      // Reset relevant quantum counter
+      if (selectedAlgorithm === SchedulingAlgorithm.MLFQ) {
+        dispatch(resetQueueQuantumUsed({ processId: nextProcessToSchedule.id }));
+      } else if (selectedAlgorithm === SchedulingAlgorithm.RR) {
+        dispatch(resetQuantumUsed()); // Reset global RR counter
+        // Ensure process is removed from RR queue state AFTER being selected
+        if (getState().scheduler.rrQueue[0] === nextProcessToSchedule.id) {
+          dispatch(popFromRRQueue());
+        } else {
+          console.warn(`RR: Selected process ${nextProcessToSchedule.id} wasn't at the front of rrQueue?`);
+        }
+      }
+
+      // Update process status to RUNNING, set startTime/startedAt
+      // Use find on latestProcesses to ensure we have the most recent version
+      const processToStartData = latestProcesses.find(p => p.id === nextProcessToSchedule!.id);
+      if (processToStartData) {
+        const processToStartUpdate = { ...processToStartData, status: ProcessStatus.RUNNING };
+        processToStartUpdate.startedAt = [...(processToStartUpdate.startedAt ?? []), currentTime];
+        if (processToStartUpdate.startTime === undefined) {
+          processToStartUpdate.startTime = currentTime;
+          console.log(`Tick ${currentTime}: Process ${processToStartUpdate.id} FIRST START.`);
+        } else {
+          console.log(`Tick ${currentTime}: Process ${processToStartUpdate.id} RESUMED.`);
+        }
+        dispatch(updateProcess(processToStartUpdate));
+      } else {
+        console.error(`Error: Selected process ${nextProcessToSchedule.id} not found in latest process list!`);
+      }
+
+      cpuWasIdleThisTick = false; // CPU will be busy next tick
+
+    } else {
+      // No process was scheduled
+      console.log(`Tick ${currentTime}: No process scheduled. CPU remains idle.`);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      cpuWasIdleThisTick = true;
+      // Ensure activeProcessId is null if none were selected
+      if (getState().scheduler.activeProcessId !== null) {
+        dispatch(setActiveProcess(null));
+      }
+    }
+  } // End of selecting new process
+  // --- End Step 3 ---
+
+
+  // --- Step 4: Update Idle Time & Status ---
+  // Check the definitive active ID *after* scheduling attempts
+  let finalProcesses = getState().processes.processes;
+  let allCompleted = finalProcesses.length > 0 && finalProcesses.every(p => p.status === ProcessStatus.COMPLETED);
+  const finalActiveId = getState().scheduler.activeProcessId;
+  if (finalActiveId === null && !allCompleted) { // Added !allCompleted check
+    console.log(`Tick ${currentTime}: CPU determined to be Idle.`);
     dispatch(incrementIdleTime());
-    dispatch(setSimulationStatus(SimulationStatus.IDLE));
-    console.log(`Time ${currentTime}: CPU Idle`);
-  } else if (nextActiveProcessId !== null) {
+    if (getState().scheduler.status !== SimulationStatus.COMPLETED) {
+      dispatch(setSimulationStatus(SimulationStatus.IDLE));
+    }
+  } else if (finalActiveId !== null) {
     dispatch(setSimulationStatus(SimulationStatus.RUNNING));
   }
+  // --- End Step 4 ---
 
+
+  // --- Step 5: Update Metrics ---
   await dispatch(calculateAndUpdateMetrics());
+  // --- End Step 5 ---
 
-  const allProcesses = getState().processes.processes; // Get potentially updated list
-  const allCompleted = allProcesses.length > 0 && allProcesses.every(p => p.status === ProcessStatus.COMPLETED);
+
+  // --- Step 6: Check for Termination ---
+  finalProcesses = getState().processes.processes;
+  allCompleted = finalProcesses.length > 0 && finalProcesses.every(p => p.status === ProcessStatus.COMPLETED);
 
   if (allCompleted) {
-    console.log(`Simulation Complete at time ${currentTime}`);
-    dispatch(pauseSimulation()); // Stop the simulation interval
-    dispatch(setSimulationStatus(SimulationStatus.PAUSED)); // Set final status
+    console.log(`Simulation Complete at time ${currentTime}`); // Completion happens at end of tick
+    dispatch(pauseSimulation());
+    dispatch(setSimulationStatus(SimulationStatus.COMPLETED)); // Use COMPLETED status
   } else {
+    // --- Step 7: Advance Time (Only if not completed) ---
     dispatch(incrementTime());
-    if (selectedAlgorithm === SchedulingAlgorithm.RR) {
-      console.log("quantum before ", currentQuantumUsed);
-      dispatch(incrementQuantumUsed());
-      console.log("quntum after ", getState().scheduler.currentQuantumUsed);
-    }
   }
+  // --- End Steps 6 & 7 ---
 
-  console.log(`End of Tick ${currentTime}. Next Time: ${getState().scheduler.currentTime}. Status: ${getState().scheduler.status}`);
+  const duration = Date.now() - initialTimestamp;
+  console.log(`--- Tick End: ${currentTime} (Took ${duration}ms). Next Time: ${getState().scheduler.currentTime}. Status: ${getState().scheduler.status} ---`);
 });
 
 export const calculateAndUpdateMetrics = createAsyncThunk<

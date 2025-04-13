@@ -4,14 +4,18 @@ import { useAppSelector } from "@/lib/hooks";
 import { Process, SchedulingAlgorithm } from "@/lib/definitions";
 import React from "react";
 import { getReadyQueue } from "@/utils/algorithms";
+import { getMlfqReadyProcesses } from "@/lib/utils";
 
 const ReadyQueue = () => {
   const { processes: processesState } = useAppSelector(state => state.processes);
   const scheduler = useAppSelector(state => state.scheduler);
+  const mlfqState = useAppSelector(state => state.mlfq);
 
-  const processes = scheduler.selectedAlgorithm !== SchedulingAlgorithm.RR
+  const processes = scheduler.selectedAlgorithm !== SchedulingAlgorithm.RR && scheduler.selectedAlgorithm !== SchedulingAlgorithm.MLFQ
     ? getReadyQueue(scheduler.selectedAlgorithm, scheduler.currentTime, processesState)
-    : scheduler.rrQueue.map(i => (processesState.find(p => p.id === i) as Process));
+    : scheduler.selectedAlgorithm === SchedulingAlgorithm.RR
+      ? scheduler.rrQueue.map(i => (processesState.find(p => p.id === i) as Process))
+      : getMlfqReadyProcesses(processesState, mlfqState, scheduler.currentTime);
 
   let sortByText: string;
 
@@ -29,7 +33,7 @@ const ReadyQueue = () => {
       sortByText = "Arrival Time (Round Robin)";
       break;
     default:
-      sortByText = "Arrival Time";
+      sortByText = "Multiple Queues (MLFQ)";
   }
 
   if (!processes || processes.length === 0) {

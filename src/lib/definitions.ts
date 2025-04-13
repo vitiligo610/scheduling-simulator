@@ -32,6 +32,7 @@ export enum SimulationStatus {
   RUNNING = "running",
   IDLE = "idle",
   PAUSED = "paused",
+  COMPLETED = "completed",
 }
 
 export interface SimulationState {
@@ -63,4 +64,19 @@ export interface PerformanceMetrics {
   avgResponseTime: number;
   cpuUsage: number;
   throughput: number;
+}
+
+export interface MlfqQueueConfig {
+  id: number;
+  priority: number;
+  algorithm: SchedulingAlgorithm.RR;
+  quantum: number;
+}
+
+export interface MlfqState {
+  numQueues: number;
+  queuesConfig: MlfqQueueConfig[];
+  queueContents: number[][];
+  processQueueMap: Record<number, number>;
+  currentQueueQuantumUsed: Record<number, number>;
 }

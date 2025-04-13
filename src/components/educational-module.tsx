@@ -30,6 +30,11 @@ const EducationalModule = () => {
           unit of CPU time (time quantum). If the process doesn&#39;t finish within the quantum, it&#39;s moved to the
           end of
           the ready queue. Fair but can have high context switching overhead.</p>
+        <h4 className="font-medium mt-4">Multilevel Feedback Queue (MLFQ)</h4>
+        <p className="text-sm">Uses multiple priority queues and dynamically adjusts process priorities based on CPU
+          usage. CPU-intensive processes move to lower-priority queues, while interactive processes stay in or move to
+          higher-priority queues. Aims to approximate SJF without needing prior burst time knowledge, balancing
+          responsiveness and fairness.</p>
       </div>
     </div>
   );

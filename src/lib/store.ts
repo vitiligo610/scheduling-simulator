@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import processReducer from "./features/process/processSlice";
 import schedulerReducer from "./features/scheduler/schedulerSlice";
 import metricsReducer from "./features/metrics/metricsSlice";
+import mlfqReducer from "./features/mlfq/mlfqSlice";
 
 export const makeStore = () =>
   configureStore({
@@ -9,6 +10,7 @@ export const makeStore = () =>
       processes: processReducer,
       scheduler: schedulerReducer,
       metrics: metricsReducer,
+      mlfq: mlfqReducer,
     },
     devTools: {
       maxAge: 1000,

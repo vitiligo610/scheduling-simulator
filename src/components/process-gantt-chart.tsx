@@ -173,7 +173,7 @@ export default function GanttChartCard() {
           <CartesianGrid strokeDasharray="0 0" strokeOpacity={0.2} />
           <XAxis
             type="number"
-            domain={[0, "dataMax + 2"]}
+            domain={[0, "dataMax + 5"]}
             scale="linear"
             tickLine={false}
             axisLine={false}

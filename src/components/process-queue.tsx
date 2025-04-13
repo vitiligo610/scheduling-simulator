@@ -3,8 +3,9 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ProcessStatusBadge from "./process-status-badge";
 import { useAppSelector } from "@/lib/hooks";
-import { ProcessStatus } from "@/lib/definitions";
+import { ProcessStatus, SchedulingAlgorithm } from "@/lib/definitions";
 import ProcessQueueButtons from "@/components/process-queue-buttons";
+import MlfqConfigDialog from "@/components/mlfq-config-dialog";
 
 const ProcessQueue = () => {
   const processes = useAppSelector(state => state.processes.processes);
@@ -14,6 +15,7 @@ const ProcessQueue = () => {
     <div className="rounded-md border flex flex-col h-full">
       <div className="px-4 py-3 border-b flex-shrink-0 flex items-center justify-between">
         <h3 className="text-md font-medium">Process Queue</h3>
+        {scheduler.selectedAlgorithm === SchedulingAlgorithm.MLFQ && <MlfqConfigDialog />}
         <ProcessQueueButtons />
       </div>
 
