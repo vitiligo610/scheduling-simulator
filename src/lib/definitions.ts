@@ -80,3 +80,46 @@ export interface MlfqState {
   processQueueMap: Record<number, number>;
   currentQueueQuantumUsed: Record<number, number>;
 }
+
+export interface AlgorithmSuggestion {
+  suggestedAlgorithm: SchedulingAlgorithm;
+  currentAlgorithm: SchedulingAlgorithm;
+  reason: string;
+  estimatedBenefit: string;
+}
+
+export interface ParameterSuggestion {
+  parameter: string;
+  suggestedValue: number | string;
+  reasoning: string;
+}
+
+export type PerformanceRating = "low" | "medium" | "high" | "very_high" | "very_low" | "n/a";
+
+export interface AlgorithmPerformancePrediction {
+  algorithm: SchedulingAlgorithm;
+  workloadType: string;
+  waitingTime: PerformanceRating;
+  turnaroundTime: PerformanceRating;
+  responseTime: PerformanceRating;
+  throughput: PerformanceRating;
+  cpuUtilization: PerformanceRating;
+  fairness: PerformanceRating;
+  contextSwitches?: PerformanceRating;
+  confidence: PerformanceRating;
+}
+
+export interface FeedbackState {
+  algorithmSuggestion: AlgorithmSuggestion | null;
+  analyzedWorkloadType: string | null;
+  detectedPattern: string | null;
+  anomalies: string[];
+  parameterSuggestion: ParameterSuggestion | null;
+  performancePredictions: {
+    current: AlgorithmPerformancePrediction | null;
+    recommended: AlgorithmPerformancePrediction | null;
+  } | null;
+  lastAnalyzedTime: number;
+}
+
+export type FeedbackReport = Omit<FeedbackState, "lastAnalyzedTime">;

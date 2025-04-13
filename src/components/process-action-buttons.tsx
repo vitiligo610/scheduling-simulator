@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -34,7 +33,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Process } from "@/lib/definitions";
 import { removeProcess, updateProcess } from "@/lib/features/process/processSlice";
-import { useAppSelector } from "@/lib/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { toast } from "sonner";
 import { pauseSimulation, startSimulation } from "@/lib/features/scheduler/schedulerSlice";
 
@@ -44,7 +43,7 @@ const formSchema = z.object({
     .number({ invalid_type_error: "Must be a number" })
     .int({ message: "Must be an integer" })
     .positive({ message: "Burst time must be positive" }),
-  priority: z.coerce // Use coerce
+  priority: z.coerce
     .number({ invalid_type_error: "Must be a number" })
     .int({ message: "Must be an integer" })
     .min(1, { message: "Priority cannot be negative" }),
@@ -57,7 +56,7 @@ interface ProcessActionButtonsProps {
 }
 
 const ProcessActionButtons: React.FC<ProcessActionButtonsProps> = ({ processId }) => {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const scheduler = useAppSelector(state => state.scheduler);
   const process = useAppSelector(state =>

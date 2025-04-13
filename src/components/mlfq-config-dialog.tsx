@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { setMlfqConfig } from "@/lib/features/mlfq/mlfqSlice";
 import type { RootState } from "@/lib/store";
+import { useAppDispatch } from "@/lib/hooks";
 
 const formSchema = z.object({
   numQueues: z.coerce.number().int().min(2).max(5),
@@ -30,7 +31,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export default function MlfqConfigDialog() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
 
   const mlfqConfig = useSelector((state: RootState) => state.mlfq);

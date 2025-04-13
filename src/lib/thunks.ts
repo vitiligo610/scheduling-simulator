@@ -11,7 +11,17 @@ import {
   setActiveProcess,
   setSimulationStatus,
 } from "@/lib/features/scheduler/schedulerSlice";
-import { MetricsState, Process, ProcessStatus, SchedulingAlgorithm, SimulationStatus } from "@/lib/definitions";
+import {
+  AlgorithmPerformancePrediction,
+  AlgorithmSuggestion,
+  FeedbackReport,
+  MetricsState,
+  ParameterSuggestion,
+  Process,
+  ProcessStatus,
+  SchedulingAlgorithm,
+  SimulationStatus,
+} from "@/lib/definitions";
 import { updateProcess } from "@/lib/features/process/processSlice";
 import { fcfsScheduler } from "@/utils/algorithms";
 import { initialState as initialMetricsState } from "@/lib/features/metrics/metricsSlice";
@@ -24,6 +34,7 @@ import {
   removeProcessFromMlfq,
   resetQueueQuantumUsed,
 } from "@/lib/features/mlfq/mlfqSlice";
+import { setLastAnalyzedTime, updateFeedbackReport } from "@/lib/features/feedback/feedbackSlice";
 
 export const simulationTick = createAsyncThunk<void, void, {
   state: RootState
@@ -451,3 +462,244 @@ export const calculateAndUpdateMetrics = createAsyncThunk<
     }
   },
 );
+const generateFeedbackReport = (
+  processes: Readonly<Process[]>,
+  currentTime: number,
+  currentAlgorithm: SchedulingAlgorithm,
+  preemptive: boolean,
+  quantum: number,
+  mlfqState: Readonly<RootState["mlfq"]>,
+  metrics: Readonly<MetricsState>,
+): FeedbackReport | null => {
+
+  const readyProcesses = processes.filter(p =>
+    p.arrivalTime <= currentTime &&
+    p.status === ProcessStatus.READY,
+  );
+  const activeProcesses = processes.filter(p => p.status === ProcessStatus.RUNNING || p.status === ProcessStatus.READY);
+
+  if (activeProcesses.length < 2 && currentTime < 10) {
+    return null;
+  }
+
+  let workloadType = "mixed"; // Default
+  const numReady = readyProcesses.length;
+  const numActive = activeProcesses.length;
+  if (numActive > 0) {
+    const shortJobThreshold = 5;
+    const longJobThreshold = 20;
+    const numShort = activeProcesses.filter(p => p.burstTime <= shortJobThreshold).length;
+    const numLong = activeProcesses.filter(p => p.burstTime >= longJobThreshold).length;
+
+    if (numShort / numActive > 0.6) workloadType = "short_jobs_dominant";
+    else if (numLong / numActive > 0.6) workloadType = "long_jobs_dominant";
+    else if (numReady > numActive * 0.5) workloadType = "high_contention"; // Many waiting relative to active
+  }
+
+  console.log(`Feedback Analysis: Workload Type (Heuristic) = ${workloadType}`);
+
+  const anomalies: string[] = [];
+  const highWaitThreshold = 15; // Example
+  const lowUtilThreshold = 60; // Example
+  if (metrics.averageWaitingTime > highWaitThreshold) {
+    anomalies.push(`High average waiting time (${metrics.averageWaitingTime.toFixed(1)})`);
+  }
+  if (metrics.cpuUtilization < lowUtilThreshold && currentTime > 10) {
+    anomalies.push(`Low CPU utilization (${metrics.cpuUtilization.toFixed(1)}%)`);
+  }
+
+  let algorithmSuggestion: AlgorithmSuggestion | null = null;
+  if (currentAlgorithm === SchedulingAlgorithm.FCFS && workloadType === "short_jobs_dominant") {
+    algorithmSuggestion = {
+      suggestedAlgorithm: SchedulingAlgorithm.SJF,
+      currentAlgorithm,
+      reason: "many short jobs",
+      estimatedBenefit: "SJF minimizes average wait for short jobs.",
+    };
+  } else if ((currentAlgorithm === SchedulingAlgorithm.FCFS || currentAlgorithm === SchedulingAlgorithm.SJF) && anomalies.some(a => a.includes("High average waiting time"))) {
+    algorithmSuggestion = {
+      suggestedAlgorithm: SchedulingAlgorithm.RR,
+      currentAlgorithm,
+      reason: "high waiting times",
+      estimatedBenefit: "RR provides fairer CPU sharing.",
+    };
+  } else if (workloadType === "high_contention" && currentAlgorithm !== SchedulingAlgorithm.MLFQ) {
+    algorithmSuggestion = {
+      suggestedAlgorithm: SchedulingAlgorithm.MLFQ,
+      currentAlgorithm,
+      reason: "high contention / mixed needs",
+      estimatedBenefit: "MLFQ adapts well to varying job types and priorities.",
+    };
+  }
+
+  let parameterSuggestion: ParameterSuggestion | null = null;
+  if (currentAlgorithm === SchedulingAlgorithm.RR) {
+    if (workloadType === "short_jobs_dominant" && quantum > 2) {
+      parameterSuggestion = {
+        parameter: "quantum",
+        suggestedValue: Math.max(1, quantum - 1),
+        reasoning: "Shorter quantum may improve responsiveness for short jobs.",
+      };
+    } else if (workloadType === "long_jobs_dominant" && quantum < 8) {
+      parameterSuggestion = {
+        parameter: "quantum",
+        suggestedValue: quantum + 2,
+        reasoning: "Longer quantum may reduce context switching for long jobs.",
+      };
+    }
+  }
+
+  const predictPerformance = (algo: SchedulingAlgorithm, workload: string): AlgorithmPerformancePrediction => {
+    if (algo === SchedulingAlgorithm.FCFS) {
+      if (workload === "short_jobs_dominant") return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "high",
+        turnaroundTime: "high",
+        responseTime: "high",
+        throughput: "low",
+        cpuUtilization: "medium",
+        fairness: "low",
+        confidence: "medium",
+      };
+      if (workload === "long_jobs_dominant") return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "very_high",
+        turnaroundTime: "very_high",
+        responseTime: "very_high",
+        throughput: "very_low",
+        cpuUtilization: "high",
+        fairness: "very_low",
+        confidence: "high",
+      };
+      return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "medium",
+        turnaroundTime: "medium",
+        responseTime: "medium",
+        throughput: "medium",
+        cpuUtilization: "medium",
+        fairness: "medium",
+        confidence: "low",
+      };
+    }
+    if (algo === SchedulingAlgorithm.SJF) {
+      if (workload === "short_jobs_dominant") return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "low",
+        turnaroundTime: "low",
+        responseTime: "low",
+        throughput: "high",
+        cpuUtilization: "high",
+        fairness: "low",
+        confidence: "high",
+      };
+      return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "medium",
+        turnaroundTime: "medium",
+        responseTime: "medium",
+        throughput: "medium",
+        cpuUtilization: "medium",
+        fairness: "low",
+        confidence: "medium",
+      };
+    }
+    if (algo === SchedulingAlgorithm.RR) {
+      if (workload === "short_jobs_dominant") return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "medium",
+        turnaroundTime: "medium",
+        responseTime: "low",
+        throughput: "medium",
+        cpuUtilization: "medium",
+        fairness: "high",
+        contextSwitches: "high",
+        confidence: "medium",
+      };
+      return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "medium",
+        turnaroundTime: "medium",
+        responseTime: "medium",
+        throughput: "medium",
+        cpuUtilization: "medium",
+        fairness: "high",
+        contextSwitches: "medium",
+        confidence: "medium",
+      };
+    }
+    if (algo === SchedulingAlgorithm.MLFQ) {
+      return {
+        algorithm: algo,
+        workloadType: workload,
+        waitingTime: "low",
+        turnaroundTime: "medium",
+        responseTime: "low",
+        throughput: "high",
+        cpuUtilization: "high",
+        fairness: "high",
+        contextSwitches: "medium",
+        confidence: "medium",
+      }; // Generally good all-rounder
+    }
+    return {
+      algorithm: algo,
+      workloadType: workload,
+      waitingTime: "n/a",
+      turnaroundTime: "n/a",
+      responseTime: "n/a",
+      throughput: "n/a",
+      cpuUtilization: "n/a",
+      fairness: "n/a",
+      confidence: "low",
+    };
+  };
+
+  const currentPrediction = predictPerformance(currentAlgorithm, workloadType);
+  const recommendedPrediction = algorithmSuggestion ? predictPerformance(algorithmSuggestion.suggestedAlgorithm, workloadType) : null;
+
+  return {
+    algorithmSuggestion: algorithmSuggestion,
+    analyzedWorkloadType: workloadType,
+    detectedPattern: null,
+    anomalies: anomalies,
+    parameterSuggestion: parameterSuggestion,
+    performancePredictions: {
+      current: currentPrediction,
+      recommended: recommendedPrediction,
+    },
+  };
+};
+
+
+export const updateFeedbackSuggestion = createAsyncThunk<
+  void,
+  void,
+  { state: RootState }
+>("feedback/updateSuggestion", async (_, { getState, dispatch }) => {
+  const state = getState();
+  const { processes } = state.processes;
+  const { currentTime, selectedAlgorithm, preemptive, quantum } = state.scheduler;
+  const { mlfq } = state;
+  const metrics = state.metrics;
+
+  const report = generateFeedbackReport(
+    processes,
+    currentTime,
+    selectedAlgorithm,
+    preemptive,
+    quantum,
+    mlfq,
+    metrics,
+  );
+
+  dispatch(updateFeedbackReport(report));
+  dispatch(setLastAnalyzedTime(currentTime));
+});

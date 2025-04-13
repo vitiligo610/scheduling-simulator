@@ -7,17 +7,28 @@ import PerformanceFeedback from "@/components/performance-feedback";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { useEffect, useRef } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { simulationTick } from "@/lib/thunks";
+import { simulationTick, updateFeedbackSuggestion } from "@/lib/thunks";
 import { TICK_DURATION } from "@/lib/utils";
+import { throttle } from "lodash";
 
 const SimulatorPage = () => {
   const dispatch = useAppDispatch();
-  const isRunning = useAppSelector(state => state.scheduler.isRunning);
+  const scheduler = useAppSelector(state => state.scheduler);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const simulationSpeedMs = 500;
 
+  const throttledAnalysis = useRef(
+    throttle(() => {
+      console.log("Running throttled feedback analysis...");
+      dispatch(updateFeedbackSuggestion());
+    }, 500, { leading: false, trailing: true }),
+  ).current;
+
   useEffect(() => {
-    if (isRunning) {
+    if (scheduler.isRunning) {
+      if (scheduler.currentTime > 0) {
+        throttledAnalysis();
+      }
       intervalRef.current = setInterval(() => {
         dispatch(simulationTick());
       }, TICK_DURATION);
@@ -36,9 +47,10 @@ const SimulatorPage = () => {
         clearInterval(intervalRef.current);
         console.log("Simulation Interval Cleared (Cleanup)");
       }
+      throttledAnalysis.cancel();
     };
 
-  }, [isRunning, dispatch, simulationSpeedMs]);
+  }, [scheduler.isRunning, dispatch, simulationSpeedMs, scheduler.selectedAlgorithm, throttledAnalysis, scheduler.currentTime]);
 
   return (
     <div className="flex flex-col h-screen">

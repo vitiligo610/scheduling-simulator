@@ -3,6 +3,7 @@ import processReducer from "./features/process/processSlice";
 import schedulerReducer from "./features/scheduler/schedulerSlice";
 import metricsReducer from "./features/metrics/metricsSlice";
 import mlfqReducer from "./features/mlfq/mlfqSlice";
+import feedbackReducer from "./features/feedback/feedbackSlice";
 
 export const makeStore = () =>
   configureStore({
@@ -11,6 +12,7 @@ export const makeStore = () =>
       scheduler: schedulerReducer,
       metrics: metricsReducer,
       mlfq: mlfqReducer,
+      feedback: feedbackReducer,
     },
     devTools: {
       maxAge: 1000,
