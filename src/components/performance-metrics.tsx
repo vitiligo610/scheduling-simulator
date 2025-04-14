@@ -2,7 +2,7 @@
 
 import { useAppSelector } from "@/lib/hooks";
 
-const PerformanceMetrics = () => {
+const PerformanceMetrics = ({ summaryView = false }: { summaryView?: boolean; }) => {
   const metrics = useAppSelector(state => state.metrics);
 
   return (
@@ -28,6 +28,12 @@ const PerformanceMetrics = () => {
           <div className="text-lg font-semibold">{metrics.throughput.toFixed(2)} p/s</div>
         </div>
       </div>
+      {summaryView && <div className="p-4 pt-0">
+        <div className="text-sm text-muted-foreground">Completion Order</div>
+        <p className="text-sm font-mono break-all">
+          {metrics.completionOrder.length > 0 ? metrics.completionOrder.map(p => `P${p}`).join(" → ") : "N/A"}
+        </p>
+      </div>}
     </div>
   );
 };

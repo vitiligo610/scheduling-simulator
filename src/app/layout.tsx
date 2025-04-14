@@ -17,17 +17,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://orchestrator-vitiligo.vercel.app"),
   title: "Orchestrator - Process Scheduling Simulator",
   description: "Orchestrator is a web app for simulating process scheduling. Add processes, apply different algorithms, and see how they manage tasks.",
+  openGraph: {
+    title: "Orchestrator - Process Scheduling Simulator",
+    description: "Orchestrator is a web app for simulating process scheduling. Add processes, apply different algorithms, and see how they manage tasks.",
+    images: "/opengraph-image.png",
+  },
 };
 
 const RootLayout = ({ children }: Readonly<{
   children: React.ReactNode;
 }>) => (
   <html lang="en" suppressHydrationWarning>
-  <head>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt/dist/frappe-gantt.css" />
-  </head>
   <body
     className={`${geistSans.variable} ${geistMono.variable} antialiased`}
   >

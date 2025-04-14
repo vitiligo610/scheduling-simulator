@@ -3,13 +3,14 @@
 import { useAppSelector } from "@/lib/hooks";
 import { ProcessStatus } from "@/lib/definitions";
 import ProcessGanttChart from "@/components/process-gantt-chart";
+import { cn } from "@/lib/utils";
 
-const GanttChart = () => {
+const GanttChart = ({ className }: { className?: string }) => {
   const { processes } = useAppSelector(state => state.processes);
   const filteredProcesses = processes.filter(p => p.status === ProcessStatus.COMPLETED || p.status === ProcessStatus.RUNNING);
 
   return (
-    <div className="space-y-2 px-4">
+    <div className={cn("space-y-2 px-4", className)}>
       <h4 className="text-md font-medium">Gantt Chart</h4>
       {filteredProcesses.length === 0
         ? (

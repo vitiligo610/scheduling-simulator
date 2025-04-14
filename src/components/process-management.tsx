@@ -1,4 +1,4 @@
-import ProcessQueue from "./process-queue";
+import ProcessesTable from "./processes-table";
 import ProcessForm from "./process-form";
 
 const ProcessManagement = () => (
@@ -8,7 +8,7 @@ const ProcessManagement = () => (
       <ProcessForm />
     </div>
     <div className="flex-1 min-h-0">
-      <ProcessQueue />
+      <ProcessesTable />
     </div>
   </div>
 );

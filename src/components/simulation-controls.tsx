@@ -2,7 +2,7 @@
 
 import { NavigationMenuItem } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
-import { Pause, Play, RotateCw, Share } from "lucide-react";
+import { Pause, Play, RotateCw } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
   pauseSimulation,
@@ -14,7 +14,7 @@ import { resetProcesses } from "@/lib/features/process/processSlice";
 import { resetMetrics } from "@/lib/features/metrics/metricsSlice";
 import { SchedulingAlgorithm } from "@/lib/definitions";
 import { getReadyQueue } from "@/utils/algorithms";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import * as React from "react";
 
 const SimulationControls = () => {
   const dispatch = useAppDispatch();
@@ -47,20 +47,7 @@ const SimulationControls = () => {
           <RotateCw /> Reset
         </Button>
       </NavigationMenuItem>
-      <NavigationMenuItem>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Share />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Export to PNG</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </NavigationMenuItem></>
+    </>
   );
 };
 
