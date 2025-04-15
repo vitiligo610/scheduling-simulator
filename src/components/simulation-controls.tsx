@@ -15,6 +15,7 @@ import { resetMetrics } from "@/lib/features/metrics/metricsSlice";
 import { SchedulingAlgorithm } from "@/lib/definitions";
 import { getReadyQueue } from "@/utils/algorithms";
 import * as React from "react";
+import { clearSuggestion } from "@/lib/features/feedback/feedbackSlice";
 
 const SimulationControls = () => {
   const dispatch = useAppDispatch();
@@ -25,6 +26,7 @@ const SimulationControls = () => {
     dispatch(resetProcesses(0));
     dispatch(resetSimulation());
     dispatch(resetMetrics());
+    dispatch(clearSuggestion());
     if (scheduler.selectedAlgorithm === SchedulingAlgorithm.RR) {
       getReadyQueue(SchedulingAlgorithm.RR, scheduler.currentTime, processes).forEach(p => dispatch(pushToRRQueue(p.id)));
     }

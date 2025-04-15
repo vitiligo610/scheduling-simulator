@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Trash } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { clearProcesses, resetProcesses } from "@/lib/features/process/processSlice";
+import { clearSuggestion } from "@/lib/features/feedback/feedbackSlice";
 
 const ProcessQueueButtons = () => {
   const currentTime = useAppSelector(state => state.scheduler.currentTime);
@@ -26,7 +27,10 @@ const ProcessQueueButtons = () => {
       </TooltipProvider><TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button size="icon" variant="destructive" onClick={() => dispatch(clearProcesses())}>
+          <Button size="icon" variant="destructive" onClick={() => {
+            dispatch(clearProcesses());
+            dispatch(clearSuggestion());
+          }}>
             <Trash />
           </Button>
         </TooltipTrigger>
