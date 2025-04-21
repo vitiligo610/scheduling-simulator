@@ -36,7 +36,7 @@ const ReadyQueue = () => {
       sortByText = "Multiple Queues (MLFQ)";
   }
 
-  if (!processes || processes.length === 0) {
+  if (!processes || processes.filter(process => process.id !== scheduler.activeProcessId).length === 0) {
     return (
       <div className="space-y-2 px-4">
         <h4 className="text-md font-medium">Ready queue</h4>
@@ -62,7 +62,7 @@ const ReadyQueue = () => {
             <div className="h-10 w-4 border-t-2 border-b-2 border-l-2 rounded-l-md"></div>
           </div>
 
-          {processes.map((process) => (
+          {processes.filter(process => process.id !== scheduler.activeProcessId).map((process) => (
             <div
               key={process.id}
               className="flex-shrink-0 h-10 w-12 flex items-center justify-center rounded-md font-medium text-sm text-white"
