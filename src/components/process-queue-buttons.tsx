@@ -6,6 +6,7 @@ import { RefreshCw, Trash } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { clearProcesses, resetProcesses } from "@/lib/features/process/processSlice";
 import { clearSuggestion } from "@/lib/features/feedback/feedbackSlice";
+import { clearRRQueue } from "@/lib/features/scheduler/schedulerSlice";
 
 const ProcessQueueButtons = () => {
   const currentTime = useAppSelector(state => state.scheduler.currentTime);
@@ -29,6 +30,7 @@ const ProcessQueueButtons = () => {
         <TooltipTrigger asChild>
           <Button size="icon" variant="destructive" onClick={() => {
             dispatch(clearProcesses());
+            dispatch(clearRRQueue());
             dispatch(clearSuggestion());
           }}>
             <Trash />

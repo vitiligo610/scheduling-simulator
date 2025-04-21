@@ -78,6 +78,9 @@ const schedulerSlice = createSlice({
     popFromRRQueue(state) {
       state.rrQueue = state.rrQueue.slice(1);
     },
+    clearRRQueue(state) {
+      state.rrQueue = [];
+    },
   },
 });
 
@@ -97,6 +100,7 @@ export const {
   togglePremeption,
   pushToRRQueue,
   popFromRRQueue,
+  clearRRQueue,
 } = schedulerSlice.actions;
 
 export default schedulerSlice.reducer;
