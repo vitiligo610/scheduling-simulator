@@ -121,7 +121,9 @@ export default function GanttChartCard() {
         const id = `${yAxisPrefix}${i}`;
         const yaxis = {
           component: <YAxis key={`yaxis-${id}`} yAxisId={id} type="category" hide={i !== 0} dataKey="label"
-                            tickLine={{ strokeOpacity: 0.2, opacity: 0.2 }} />,
+                            tick={{ fontSize: 14 }}
+                            tickLine={{ strokeOpacity: 0.2, strokeWidth: 1 }}
+                            axisLine={{ strokeOpacity: 0.2, strokeWidth: 1 }} />,
           id: `yaxis-${id}`,
         };
         setYAxes(prev => [...prev.filter(p => p.id !== `yaxis-${id}`), yaxis]);

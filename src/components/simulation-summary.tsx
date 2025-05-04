@@ -5,6 +5,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import GanttChart from "@/components/gantt-chart";
 import PerformanceMetrics from "@/components/performance-metrics";
 import ProcessesTable from "@/components/processes-table";
+import ProcessBarChart from "@/components/process-bar-chart";
+import ProcessPieChart from "@/components/process-pie-chart";
 
 const SimulationSummary = () => {
   return (
@@ -14,7 +16,8 @@ const SimulationSummary = () => {
           View Summary
         </Button>
       </SheetTrigger>
-      <SheetContent id="simulation-summary" side="right" className="w-[900px] min-w-[900px] h-screen">
+      <SheetContent id="simulation-summary" side="right"
+                    className="w-[900px] min-w-[900px] h-screen minimal-scrollbar overflow-y-auto">
         <SheetHeader className="px-4 py-3">
           <div>
             <SheetTitle>Simulation Summary</SheetTitle>
@@ -24,11 +27,11 @@ const SimulationSummary = () => {
           </div>
         </SheetHeader>
         <div className="px-4 py-3 flex flex-col gap-4 h-full overflow-y-auto minimal-scrollbar">
-          <div className="flex gap-1">
-            <GanttChart className="w-full pl-0" />
-            <PerformanceMetrics summaryView />
-          </div>
+          <PerformanceMetrics summaryView />
           <ProcessesTable summaryView />
+          <GanttChart className="w-full pl-0" />
+          <ProcessBarChart />
+          <ProcessPieChart />
         </div>
       </SheetContent>
     </Sheet>
