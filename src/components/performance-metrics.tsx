@@ -37,4 +37,5 @@ const PerformanceMetrics = ({ summaryView = false }: { summaryView?: boolean; })
     </div>
   );
 };
+
 export default PerformanceMetrics;

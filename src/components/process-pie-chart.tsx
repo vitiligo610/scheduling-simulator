@@ -20,7 +20,7 @@ const ProcessPieChart = () => {
 
   const chartData: ChartDatatype[] = useMemo(() => {
     const processSlices = processes.map((process) => ({
-      process: `P${process.id}`,
+      process: process.name,
       duration: process.burstTime,
       fill: process.color,
     }));

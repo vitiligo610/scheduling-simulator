@@ -17,6 +17,7 @@ const processSlice = createSlice({
   reducers: {
     addProcess(state, action: PayloadAction<Process>) {
       action.payload.id = ++state.lastProcessId;
+      action.payload.name = `P${action.payload.id}`;
       state.processes.push(action.payload);
     },
     removeProcess(state, action: PayloadAction<number>) {

@@ -29,7 +29,7 @@ const ProcessBarChart = () => {
 
   const chartData: ChartDataType[] = useMemo(() => {
     return processes.map(process => ({
-      process: `P${process.id}`,
+      process: process.name,
       turnaround: process.endTime! - process.arrivalTime,
       waiting: (process.endTime! - process.arrivalTime) - process.burstTime,
     }));

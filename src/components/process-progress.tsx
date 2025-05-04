@@ -25,13 +25,11 @@ const ProcessProgress = () => {
       <h4 className="text-md font-medium">Process Progress</h4>
       <div className="space-y-4 pr-2 minimal-scrollbar">
         {processes.map((process) => {
-          // Calculate progress percentage
           const progressPercentage = Math.max(
             0,
             Math.min(100, Math.round(((process.burstTime - process.remainingTime) / process.burstTime) * 100)),
           );
 
-          // Status indicator styles
           const statusStyles = {
             [ProcessStatus.RUNNING]: "animate-pulse text-emerald-400",
             [ProcessStatus.READY]: "text-blue-400",
@@ -43,7 +41,7 @@ const ProcessProgress = () => {
             <div key={process.id} className="space-y-1">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">P{process.id}</span>
+                  <span className="font-medium">{process.name}</span>
                   <span className={`text-xs ${statusStyles[process.status]}`}>
                     {process.status.charAt(0).toUpperCase() + process.status.slice(1)}
                   </span>

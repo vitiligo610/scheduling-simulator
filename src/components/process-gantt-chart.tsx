@@ -98,7 +98,7 @@ export default function GanttChartCard() {
       }
 
       const updated = filteredProcesses.reduce((acc, current) => {
-        const key = `P${current.id}`;
+        const key = current.name;
         if (!acc[key]) {
           acc[key] = {
             id: current.id,
